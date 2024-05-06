@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stromverbrauchsanzeige</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.4/moment.min.js"></script> -->
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js"></script> -->
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <!-- <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@0.7.7/dist/chartjs-plugin-zoom.min.js"></script> -->
+  <!-- <script src="https://npmcdn.com/chart.js@3.7.1/dist/chart.min.js"></script> -->
+  <!-- <script src="https://npmcdn.com/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script> -->
+</head>
+
+<body>
+  <div class="container">
+    <h1>Stromverbrauchsanzeige</h1>
+    <div class="myChartDiv">
+      <canvas id="myChart" width="600" height="400"></canvas>
+    </div>
+    <div class="myButton">
+      <button onclick="resetZoom()">Reset Zoom</button>
+    </div>
+    <div class="controls">
+      <button onclick="beforDay()">Zurück</button>
+      <button onclick="nextDay()">Vor</button>
+      <label for="datepicker">Wählen Sie ein Datum aus:</label>
+      <input type="date" id="datepicker" onchange="calculateDateDifference()">
+      <p id="dateDifference"></p>
+    </div>
+
+    <div id="Datenvolumen"></div>
+  </div>
+
+  <script>
+    var updateValues = true;
+    var updateValuesSek = 0;
+    var day = 0;
+    var daybefor = 0;
+
+    function updateValuesCheck() {
+      if (day > 0) {
+        updateValues = false;
+      } else {
+        updateValues = true;
+      }
+    }
+
+    function nextDay() {
+      if (day != 0) {
+        daybefor = day;
+        day--
+        updateValues = true;
+        getDataAndUpdateChart();
+        updateValuesCheck();
+      }
+    }
+
+    function beforDay() {
+      daybefor = day;
+      day++
+      updateValues = true;
+      getDataAndUpdateChart();
+      updateValuesCheck();
+    }
+
+    function calculateDateDifference() {
+      var selectedDate = new Date(document.getElementById('datepicker').value);
+      var currentDate = new Date();
+
+      // Differenz in Millisekunden berechnen
+      var timeDifference = selectedDate.getTime() - currentDate.getTime();
+
+      // Differenz in Tagen berechnen
+      var dayDifference = Math.abs(Math.floor(timeDifference / (1000 * 3600 * 24))) - 1;
+
+      // Ergebnis aktualisieren
+      //document.getElementById('dateDifference').innerText = 'Differenz zum heutigen Tag: ' + dayDifference + ' Tage.';
+      daybefor = day;
+      day = dayDifference;
+      updateValues = true;
+      getDataAndUpdateChart();
+      updateValuesCheck();
+    }
+
+    var ctx = document.getElementById('myChart').getContext('2d');
+    //   var width = window.innerWidth * 0.60;
+    //   //var height = window.innerHeight * 0.50;
+    //   var height = window.innerHeight * 0.70;
+    //   ctx.canvas.width  = width;
+    //   ctx.canvas.height = height;
+    // //  ctx.translate(width,height); // now 0,0 is the center of the canvas.
+    //   ctx.translate(width/2,height/2); // now 0,0 is the center of the canvas.
+    var nbPoints = 10000;
+    var samplesPoints = 10000;
+    var thresholdsPoints = 10;
+    var dates = [];
+    var powerConsumptions = [];
+    var counterReadings = [];
+    myChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: dates,
+
+        datasets: [{
+          label: 'Stromverbrauch (Wh)',
+          data: powerConsumptions,
+          yAxisID: 'A',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          borderColor: 'rgba(255, 99, 132, 1)',
+          borderWidth: 1,
+          maxTicksLimit: 2
+        }, {
+          //   label: 'Stromverbrauch (Wh)',
+          //   data: powerConsumptionsNew,
+          //   yAxisID: 'A',
+          //   backgroundColor: 'rgba(0, 255, 132, 0.2)',
+          //   borderColor: 'rgba(0, 255, 0, 1)',
+          //   borderWidth: 1,
+          //   maxTicksLimit: 2
+          // }, {
+          label: 'Zählerstand (kWh)',
+          data: counterReadings,
+          yAxisID: 'B',
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1,
+          maxTicksLimit: 2
+          // }, {
+          //   label: '# of Votes',
+          //   data: dataArr
+        }]
+      },
+      options: {
+        //parsing: false,
+        normalized: true,
+        animation: false,
+        responsive: false,
+        plugins: {
+          decimation: {
+            enabled: true,
+            samples: samplesPoints,
+            threshold: thresholdsPoints,
+            algorithm: 'lttb'
+          },
+          zoom: {
+            limits: {
+              x: {
+                min: 0,
+                max: nbPoints,
+              }
+            },
+            pan: {
+              enabled: true,
+              mode: 'x'
+            },
+            zoom: {
+              wheel: {
+                enabled: true
+              },
+              pinch: {
+                enabled: true
+              },
+              mode: 'x'
+            },
+          }
+        },
+        // scales: {
+        //   yAxes: [{
+        //     id: 'A',
+        //     type: 'linear',
+        //     position: 'left',
+        //     ticks: {
+        //       //maxTicksLimit: 10,
+        //       autoSkip: true,
+        //       beginAtZero: false
+        //     }
+        //   }, {
+        //     id: 'B',
+        //     type: 'linear',
+        //     position: 'right',
+        //     ticks: {
+        //       //maxTicksLimit: 10,
+        //       autoSkip: true,
+        //       beginAtZero: false
+        //     }
+        //   }]
+        // }
+      }
+    });
+
+    //var updateTime =
+    function getDataAndUpdateChart() {
+      if (updateValues == false) {
+        return 0;
+      }
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          var data = JSON.parse(this.responseText);
+          if (data.length === 0) {
+            day = daybefor;
+            return 0;
+          }
+          var dates = [];
+          var powerConsumptions = [];
+          var powerConsumptionsNew = [];
+          var powerConsumptionsNewNew = [];
+          var counterReadings = [];
+
+          // Zeitzone des PCs abrufen
+          var timeZoneOffset = new Date().getTimezoneOffset();
+
+          // Daten in Arrays speichern und Zeitzone anpassen
+          //for(var i in data) {
+          //var Auflösung = (Math.ceil(data.length / (data.length / 1)))
+          var Auflösung = 1;
+          //for (var i = Auflösung; i < data.length; i += Auflösung) {
+          for (var i = 0; i < data.length; i++) {
+            //for (var i = data.length - data.length; i < data.length; i+=Auflösung ) {
+            var lastEntryIndex = data.length - 1;
+
+            var latestutcDate = new Date(data[i].date + 'T' + data[i].time + 'Z'); // Datum und Zeit in UTC konvertieren
+
+            if (i != 0 && i != Auflösung) {
+              var latestbeforutcDate = new Date(data[i - Auflösung].date + 'T' + data[i - Auflösung].time + 'Z'); // Datum und Zeit in UTC konvertieren
+              var unterschiedVerbrauch = data[i].counter_reading - data[i - Auflösung].counter_reading;
+              var power_consumptionNe
+              if (((latestutcDate - latestbeforutcDate) / 1000) <= 60) {
+                power_consumptionNew = (unterschiedVerbrauch) * (60 / ((latestutcDate - latestbeforutcDate) / (100))) * 60;
+              } else {
+                power_consumptionNew = Math.ceil(unterschiedVerbrauch)
+              }
+              //var power_consumptionNew = (unterschiedVerbrauch)  * (60 / ((latestutcDate  - latestbeforutcDate))) * 60 * 100;
+              //var power_consumptionNew = (unterschiedVerbrauch)  * (60 / ((latestutcDate  - latestbeforutcDate) / 10000)) * 60 / 100;
+
+              powerConsumptionsNew.push(power_consumptionNew);
+            } else {
+              //  powerConsumptionsNew.push(data[Auflösung + Auflösung].counter_reading - data[Auflösung].counter_reading)
+              powerConsumptionsNew.push(data[1].counter_reading - data[0].counter_reading)
+            }
+
+            var utcDate = new Date(data[i].date + 'T' + data[i].time + 'Z'); // Datum und Zeit in UTC konvertieren
+            var localDate = new Date(utcDate.getTime() - timeZoneOffset); // Zeitzone des PCs berücksichtigen
+            var formattedDate = localDate.toLocaleString(); // Datum und Zeit in lokaler Zeit formatieren
+            dates.push(formattedDate);
+            // alert(Math.abs(powerConsumptionsNew[i]));
+            if (Math.abs(data[i].power_consumption - powerConsumptionsNew[i - 1]) > 500) {
+              powerConsumptions.push(powerConsumptionsNew[i - 1]);
+            } else {
+              powerConsumptions.push(data[i].power_consumption);
+            }
+
+            //  counterReadings.push(data[i].counter_reading / 10000);
+
+            // dates.push({
+            //   x: i,
+            //   y: formattedDate
+            // })
+            powerConsumptionsNewNew.push({
+              x: i,
+              y: powerConsumptions[i]
+            })
+            counterReadings.push({
+              x: i,
+              y: data[i].counter_reading / 10000
+            })
+          }
+          var lastEntryIndex = data.length - 1;
+          //var latestutcDate = new Date(data[lastEntryIndex].date + 'T' + data[lastEntryIndex].time + 'Z');
+          //var latestbeforutcDate = new Date(data[lastEntryIndex - 1].date + 'T' + data[lastEntryIndex - 1].time + 'Z');
+          //var unterschiedVerbrauch = data[lastEntryIndex].counter_reading - data[lastEntryIndex-1].counter_reading;
+          //alert(unterschiedVerbrauch  * (60 / (latestutcDate  - latestbeforutcDate)) * 60 * 100);
+          var DatenVolumeTotal = 10;
+          var DatenVolume = 10;
+          var verbrauchHeute = (data[lastEntryIndex].counter_reading - data[0].counter_reading) / 10000;
+          DatenVolume = DatenVolume - verbrauchHeute;
+          var AllesVerbrauchtinZeit = DatenVolume * 1000 / Math.ceil(powerConsumptions[lastEntryIndex]) * 60;
+
+          while (AllesVerbrauchtinZeit < 0) {
+            DatenVolumeTotal = DatenVolumeTotal + 10;
+            verbrauchHeute = (data[lastEntryIndex].counter_reading - data[0].counter_reading) / 10000;
+            DatenVolume = DatenVolumeTotal - verbrauchHeute;
+            AllesVerbrauchtinZeit = DatenVolume * 1000 / Math.ceil(powerConsumptions[lastEntryIndex]) * 60;
+          }
+
+          // var date = new Date(0);
+          // date.setSeconds(AllesVerbrauchtinZeit*60); // specify value for SECONDS here
+          // var timeString = date.toISOString().substring(8, 23);
+
+          if (AllesVerbrauchtinZeit >= 60) {
+            AllesVerbrauchtinZeit = AllesVerbrauchtinZeit / 60;
+            if (AllesVerbrauchtinZeit >= 24) {
+              AllesVerbrauchtinZeit = (AllesVerbrauchtinZeit / 24).toFixed(2) + " Tagen";
+            } else {
+              AllesVerbrauchtinZeit = AllesVerbrauchtinZeit.toFixed(2) + " Stunden";
+            }
+          } else {
+            AllesVerbrauchtinZeit = AllesVerbrauchtinZeit.toFixed(2) + " Minuten";
+          }
+          document.getElementById('Datenvolumen').innerHTML = 'Verbrauchsvolumen übrig: ' + DatenVolume.toFixed(4) + ' kWh von ' + DatenVolumeTotal + ' kWh <br> Verbrauch heute: ' + verbrauchHeute.toFixed(4) +
+            ' kWh <br> Alles verbraucht in Zeit: ' + AllesVerbrauchtinZeit +
+            ' bei einem Verbrauch von ' + Math.ceil(powerConsumptions[lastEntryIndex]) + ' W';
+
+          updateValuesSek = dates[dates.length-1];
+
+          //Aggregation der Datenpunkte durch Mittelwertbildung
+          var n = 400;
+          /*
+          var aggregatedData = [];
+          for (var i = 0; i < data.length; i += n) {
+              var chunk = data.slice(i, i + n);
+              var sum = chunk.reduce((acc, val) => acc + val, 0);
+              var average = sum / chunk.length;
+              aggregatedData.push(average);
+          }
+          */
+          //var reducedData = data.filter((element, index) => index % n === 0);
+          var nbPoints = data.length;
+          var samplesPoints = data.length / 10;
+          var thresholdsPoints = data.length - (data.length / 10);
+          var samplesPoints = 100;
+          var thresholdsPoints = 900;
+          //myChart.data.datasets[0].data = powerConsumptions;
+          myChart.data.datasets[1].data = counterReadings;
+          myChart.data.datasets[0].data = powerConsumptionsNewNew;
+          myChart.data.labels = dates;
+          /*
+          myChart.options = {
+            //parsing: false,
+            normalized: true,
+            animation: false,
+            responsive: false,
+            plugins: {
+              decimation: {
+                enabled: true,
+                samples: samplesPoints,
+                threshold: thresholdsPoints,
+                algorithm: 'lttb'
+              },
+              zoom: {
+                limits: {
+                  x: {
+                    min: 0,
+                    max: nbPoints,
+                  }
+                },
+                pan: {
+                  enabled: true,
+                  mode: 'x'
+                },
+                zoom: {
+                  wheel: {
+                    enabled: true
+                  },
+                  pinch: {
+                    enabled: true
+                  },
+                  mode: 'x'
+                },
+              }
+            },
+
+            // scales: {
+            //   yAxes: [{
+            //     id: 'A',
+            //     type: 'linear',
+            //     position: 'left',
+            //     ticks: {
+            //       //maxTicksLimit: 10,
+            //       autoSkip: true,
+            //       beginAtZero: false
+            //     }
+            //   }, {
+            //     id: 'B',
+            //     type: 'linear',
+            //     position: 'right',
+            //     ticks: {
+            //       //maxTicksLimit: 10,
+            //       autoSkip: true,
+            //       beginAtZero: false
+            //     }
+            //   }]
+            // }
+          };
+          */
+          //myChart.height = window.innerHeight * 0.50;
+          //myChart.width = window.innerWidth * 1;
+          myChart.update();
+
+          // var ctx = document.getElementById('myChart').getContext('2d');
+          // var nbPoints = data.length;
+          // var samplesPoints = data.length / 10;
+          // var thresholdsPoints = data.length - (data.length / 10);
+          //var samplesPoints = 1000;
+          //var thresholdsPoints = 900;
+          // var dataArr = []
+          // for (let i = 0; i < nbPoints; i++) {
+          //   dataArr.push({
+          //     x: i,
+          //     y: Math.floor(Math.random() * 100)
+          //   })
+          // }
+          //
+          // myChart = new Chart(ctx, {
+          //   type: 'line',
+          //   data: {
+          //     labels: dates,
+          //
+          //     datasets: [{
+          //       label: 'Stromverbrauch (Wh)',
+          //       data: powerConsumptions,
+          //       yAxisID: 'A',
+          //       backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          //       borderColor: 'rgba(255, 99, 132, 1)',
+          //       borderWidth: 1,
+          //       maxTicksLimit: 2
+          //     }, {
+          //     //   label: 'Stromverbrauch (Wh)',
+          //     //   data: powerConsumptionsNew,
+          //     //   yAxisID: 'A',
+          //     //   backgroundColor: 'rgba(0, 255, 132, 0.2)',
+          //     //   borderColor: 'rgba(0, 255, 0, 1)',
+          //     //   borderWidth: 1,
+          //     //   maxTicksLimit: 2
+          //     // }, {
+          //       label: 'Zählerstand (kWh)',
+          //       data: counterReadings,
+          //       yAxisID: 'B',
+          //       backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          //       borderColor: 'rgba(54, 162, 235, 1)',
+          //       borderWidth: 1,
+          //       maxTicksLimit: 2
+          //       // }, {
+          //       //   label: '# of Votes',
+          //       //   data: dataArr
+          //     }]
+          //   },
+          //   options: {
+          //     //parsing: false,
+          //     normalized: true,
+          //     animation: false,
+          //     responsive: false,
+          //     plugins: {
+          //       decimation: {
+          //         enabled: true,
+          //         samples: samplesPoints,
+          //         threshold: thresholdsPoints,
+          //         algorithm: 'lttb'
+          //       },
+          //       zoom: {
+          //         limits: {
+          //           x: {
+          //             min: 0,
+          //             max: nbPoints,
+          //           }
+          //         },
+          //         pan: {
+          //           enabled: true,
+          //           mode: 'x'
+          //         },
+          //         zoom: {
+          //           wheel: {
+          //             enabled: true
+          //           },
+          //           pinch: {
+          //             enabled: true
+          //           },
+          //           mode: 'x'
+          //         },
+          //       }
+          //     },
+          //     // scales: {
+          //     //   yAxes: [{
+          //     //     id: 'A',
+          //     //     type: 'linear',
+          //     //     position: 'left',
+          //     //     ticks: {
+          //     //       //maxTicksLimit: 10,
+          //     //       autoSkip: true,
+          //     //       beginAtZero: false
+          //     //     }
+          //     //   }, {
+          //     //     id: 'B',
+          //     //     type: 'linear',
+          //     //     position: 'right',
+          //     //     ticks: {
+          //     //       //maxTicksLimit: 10,
+          //     //       autoSkip: true,
+          //     //       beginAtZero: false
+          //     //     }
+          //     //   }]
+          //     // }
+          //   }
+          // });
+        }
+      };
+      xhttp.open("GET", "./get_data.php?days=" + day, true);
+      xhttp.send();
+    }
+
+    function resetZoom() {
+      myChart.resetZoom();
+    }
+
+    function waitData() {
+      var dealy = 1;
+      if (updateValuesSek !== false) {
+        if ((updateValuesSek.charAt(updateValuesSek.length - 1) + dealy) % 10  == new Date().getSeconds() % 10) {
+          var a = (updateValuesSek.charAt(updateValuesSek.length - 2)) % 10
+          if ((Math.floor(new Date().getSeconds() / 10)) % 2 == a) {
+
+          }
+          setInterval(getDataAndUpdateChart, 20000);
+          clearInterval(waitDataTimer);
+        }
+      }
+      // Alle 20 Sekunden aufrufen
+    }
+
+    // Initial aufrufen
+    getDataAndUpdateChart();
+    var waitDataTimer = setInterval(waitData, 100);
+  </script>
+</body>
+
+</html>
