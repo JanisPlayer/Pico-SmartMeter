@@ -39,6 +39,8 @@
   <script>
     var updateValues = true;
     var updateValuesSek = 0;
+    var month = 0;
+    var monthbefor = 0;
     var day = 0;
     var daybefor = 0;
 
@@ -48,6 +50,8 @@
       } else {
         updateValues = true;
       }
+      monthbefor = month;
+      month = monthsAgo(day);
     }
 
     function nextDay() {
@@ -66,6 +70,24 @@
       updateValues = true;
       getDataAndUpdateChart();
       updateValuesCheck();
+    }
+
+    function monthsAgo(daysBack) {
+      // Heutiges Datum
+      var today = new Date();
+
+      // Datum berechnen, das eine bestimmte Anzahl von Tagen zurückliegt
+      var pastDate = new Date(today);
+      pastDate.setDate(today.getDate() - daysBack);
+
+      // Differenz in Jahren und Monaten ermitteln
+      var years = today.getFullYear() - pastDate.getFullYear();
+      var months = today.getMonth() - pastDate.getMonth();
+
+      // Gesamte Anzahl der Monate berechnen
+      var totalMonths = years * 12 + months;
+
+      return totalMonths;
     }
 
     function calculateDateDifference() {
@@ -87,6 +109,10 @@
       updateValuesCheck();
     }
 
+    if (month != monthbefor) {
+      getDataMonat();
+    }
+
     var ctx = document.getElementById('myChart').getContext('2d');
     //   var width = window.innerWidth * 0.60;
     //   //var height = window.innerHeight * 0.50;
@@ -96,7 +122,7 @@
     // //  ctx.translate(width,height); // now 0,0 is the center of the canvas.
     //   ctx.translate(width/2,height/2); // now 0,0 is the center of the canvas.
     var nbPoints = 4320;
-    var samplesPoints = nbPoints/10;
+    var samplesPoints = nbPoints / 10;
     var thresholdsPoints = nbPoints - (nbPoints / 10);
     //var samplesPoints = 100;
     //var thresholdsPoints = 900;
@@ -195,6 +221,8 @@
       }
     });
 
+    var DatenVolumeTotal = 10;
+
     function getDataMonat() {
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function() {
@@ -203,22 +231,22 @@
 
           if (data.length >= 2) {
             var unterschiedVerbrauch = (data[1].counter_reading - data[0].counter_reading) / 10000;
-
-            // Funktion fehlt die ermittelt ob auf einen anderen Monat gewechselt wurde.
-            // Ermitteln der Anzahl der Tage im aktuellen Monat
+            var firstutcDate = new Date(data[0].date + 'T' + data[0].time + 'Z').getDate() - 1;
             var today = new Date();
             var year = today.getFullYear();
             var month = today.getMonth() + 1; // Monate sind nullbasiert
-            var daysInMonth = new Date(year, month, 0).getDate();
+            var daysInMonth = new Date(year, month, 0).getDate() - firstutcDate;
 
-            document.getElementById('DatenvolumenMonat').innerHTML = 'Diesen Monat: <br>Verbrauchsvolumen: ' + (10 * daysInMonth).toFixed(4) +  ' kWh <br>' + 'Verbrauchsvolumen übrig: ' + ((10 * daysInMonth) - unterschiedVerbrauch).toFixed(4) +  ' kWh <br>' + 'Verbrauchsvolumen verbraucht: ' + unterschiedVerbrauch.toFixed(4) +  ' kWh <br>' + 'Verbrauchsvolumen übrig pro Tag: ' + ((((10 * daysInMonth) - unterschiedVerbrauch)) / (daysInMonth - today.getDate())).toFixed(4) +  ' kWh <br>' + 'Verbrauchsvolumen verbraucht pro Tag: ' + (unterschiedVerbrauch / today.getDate()).toFixed(4) +  ' kWh';
+            document.getElementById('DatenvolumenMonat').innerHTML = 'Diesen Monat: <br>Verbrauchsvolumen: ' + (DatenVolumeTotal * daysInMonth).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen übrig: ' + ((DatenVolumeTotal * daysInMonth) -
+              unterschiedVerbrauch).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen verbraucht: ' + unterschiedVerbrauch.toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen übrig pro Tag: ' + ((((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch)) /
+              (daysInMonth - today.getDate())).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen verbraucht pro Tag: ' + (unterschiedVerbrauch / (today.getDate() - firstutcDate)).toFixed(4) + ' kWh';
           } else {
             document.getElementById('DatenvolumenMonat').innerHTML = 'Nicht genügend Daten verfügbar.';
           }
         }
       };
 
-      xhttp.open("GET", "./get_data.php?months=0", true);
+      xhttp.open("GET", "./get_data.php?months=" + month, true);
       xhttp.send();
     }
 
@@ -232,6 +260,7 @@
           var data = JSON.parse(this.responseText);
           if (data.length === 0) {
             day = daybefor;
+            month = monthbefor;
             return 0;
           }
           var dates = [];
@@ -303,7 +332,6 @@
           //var latestbeforutcDate = new Date(data[lastEntryIndex - 1].date + 'T' + data[lastEntryIndex - 1].time + 'Z');
           //var unterschiedVerbrauch = data[lastEntryIndex].counter_reading - data[lastEntryIndex-1].counter_reading;
           //alert(unterschiedVerbrauch  * (60 / (latestutcDate  - latestbeforutcDate)) * 60 * 100);
-          var DatenVolumeTotal = 10;
           var DatenVolume = 10;
           var verbrauchHeute = (data[lastEntryIndex].counter_reading - data[0].counter_reading) / 10000;
           DatenVolume = DatenVolume - verbrauchHeute;
@@ -334,7 +362,7 @@
             ' kWh <br> Alles verbraucht in Zeit: ' + AllesVerbrauchtinZeit +
             ' bei einem Verbrauch von ' + Math.ceil(powerConsumptions[lastEntryIndex]) + ' W';
 
-          updateValuesSek = dates[dates.length-1];
+          updateValuesSek = dates[dates.length - 1];
 
           //Aggregation der Datenpunkte durch Mittelwertbildung
           var n = 400;
@@ -538,7 +566,7 @@
     function waitData() {
       var dealy = 1;
       if (updateValuesSek !== false) {
-        if ((updateValuesSek.charAt(updateValuesSek.length - 1) + dealy) % 10  == new Date().getSeconds() % 10) {
+        if ((updateValuesSek.charAt(updateValuesSek.length - 1) + dealy) % 10 == new Date().getSeconds() % 10) {
           var a = (updateValuesSek.charAt(updateValuesSek.length - 2)) % 10
           if ((Math.floor(new Date().getSeconds() / 10)) % 2 == a) {
 
