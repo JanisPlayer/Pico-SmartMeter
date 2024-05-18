@@ -33,6 +33,7 @@
     </div>
 
     <div id="Datenvolumen"></div>
+    <div id="DatenvolumenMonat"></div>
   </div>
 
   <script>
@@ -94,9 +95,11 @@
     //   ctx.canvas.height = height;
     // //  ctx.translate(width,height); // now 0,0 is the center of the canvas.
     //   ctx.translate(width/2,height/2); // now 0,0 is the center of the canvas.
-    var nbPoints = 10000;
-    var samplesPoints = 10000;
-    var thresholdsPoints = 10;
+    var nbPoints = 4320;
+    var samplesPoints = nbPoints/10;
+    var thresholdsPoints = nbPoints - (nbPoints / 10);
+    //var samplesPoints = 100;
+    //var thresholdsPoints = 900;
     var dates = [];
     var powerConsumptions = [];
     var counterReadings = [];
@@ -192,7 +195,33 @@
       }
     });
 
-    //var updateTime =
+    function getDataMonat() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          var data = JSON.parse(this.responseText);
+
+          if (data.length >= 2) {
+            var unterschiedVerbrauch = (data[1].counter_reading - data[0].counter_reading) / 10000;
+
+            // Funktion fehlt die ermittelt ob auf einen anderen Monat gewechselt wurde.
+            // Ermitteln der Anzahl der Tage im aktuellen Monat
+            var today = new Date();
+            var year = today.getFullYear();
+            var month = today.getMonth() + 1; // Monate sind nullbasiert
+            var daysInMonth = new Date(year, month, 0).getDate();
+
+            document.getElementById('DatenvolumenMonat').innerHTML = 'Diesen Monat: <br>Verbrauchsvolumen: ' + (10 * daysInMonth).toFixed(4) +  ' kWh <br>' + 'Verbrauchsvolumen übrig: ' + ((10 * daysInMonth) - unterschiedVerbrauch).toFixed(4) +  ' kWh <br>' + 'Verbrauchsvolumen verbraucht: ' + unterschiedVerbrauch.toFixed(4) +  ' kWh <br>' + 'Verbrauchsvolumen übrig pro Tag: ' + ((((10 * daysInMonth) - unterschiedVerbrauch)) / (daysInMonth - today.getDate())).toFixed(4) +  ' kWh <br>' + 'Verbrauchsvolumen verbraucht pro Tag: ' + (unterschiedVerbrauch / today.getDate()).toFixed(4) +  ' kWh';
+          } else {
+            document.getElementById('DatenvolumenMonat').innerHTML = 'Nicht genügend Daten verfügbar.';
+          }
+        }
+      };
+
+      xhttp.open("GET", "./get_data.php?months=0", true);
+      xhttp.send();
+    }
+
     function getDataAndUpdateChart() {
       if (updateValues == false) {
         return 0;
@@ -520,7 +549,7 @@
       }
       // Alle 20 Sekunden aufrufen
     }
-
+    getDataMonat();
     // Initial aufrufen
     getDataAndUpdateChart();
     var waitDataTimer = setInterval(waitData, 100);
