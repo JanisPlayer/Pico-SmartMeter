@@ -8,7 +8,7 @@ $database = "stromzeahler";
 // Verbindung zur Datenbank herstellen
 $conn = new mysqli($servername, $username, $password, $database);
 
-// Verbindung �berpr�fen
+// Verbindung überprüfen
 if ($conn->connect_error) {
     die("Verbindung fehlgeschlagen: " . $conn->connect_error);
 }
@@ -28,7 +28,7 @@ if ($conn->query($sql) === TRUE) {
     echo "Fehler beim Erstellen der Tabelle: " . $conn->error;
 }
 
-// SQL-Statement zum Abrufen der Daten aus der Tabelle f�r die letzten 24 Stunden
+// SQL-Statement zum Abrufen der Daten aus der Tabelle für die letzten 24 Stunden
 //$sql = "SELECT date, time, power_consumption, counter_reading FROM power_consumption WHERE date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY) ORDER BY date ASC, time ASC";
 
 /*$sql = "SELECT date, time, power_consumption, counter_reading
@@ -37,10 +37,10 @@ if ($conn->query($sql) === TRUE) {
         ORDER BY date ASC, time ASC";*/
 
 
-// Standardwert f�r die Anzahl der Tage
+// Standardwert für die Anzahl der Tage
 $days = 0;
 
-// �berpr�fen, ob ein GET-Parameter �bergeben wurde und ob er eine g�ltige Zahl ist
+// Überprüfen, ob ein GET-Parameter übergeben wurde und ob er eine gültige Zahl ist
 if (isset($_GET['days']) && is_numeric($_GET['days'])) {
     $days = intval($_GET['days']);
     if ($days < 0) {
@@ -65,12 +65,43 @@ $sql_last = "SELECT date, time, power_consumption, counter_reading
 
 $sql_first = "SELECT date, time, power_consumption, counter_reading
               FROM power_consumption
+              WHERE DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', '+02:00')) >= CURDATE() - INTERVAL $months +1 MONTH
+              AND DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', '+02:00')) < CURDATE() - INTERVAL ($months -1) MONTH
+              ORDER BY date ASC, time ASC
+              LIMIT 1";
+
+$sql_sec = "SELECT date, time, power_consumption, counter_reading
+              FROM power_consumption
               WHERE DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', '+02:00')) >= CURDATE() - INTERVAL $months MONTH
               AND DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', '+02:00')) < CURDATE() - INTERVAL ($months - 1) MONTH
               ORDER BY date ASC, time ASC
               LIMIT 1";
 
 $sql = $sql_first;
+
+// Daten aus der ersten Abfrage abrufen
+$result_first = $conn->query($sql_first);
+$data = array();
+if ($result_first->num_rows > 0) {
+    while ($row = $result_first->fetch_assoc()) {
+        $data[] = $row;
+    }
+}
+
+// Daten aus der zweiten Abfrage abrufen
+$result_sec = $conn->query($sql_sec);
+if ($result_sec->num_rows > 0) {
+    while ($row = $result_sec->fetch_assoc()) {
+        $data[] = $row;
+    }
+}
+
+// JSON-Ausgabe der gesammelten Daten
+echo json_encode($data);
+
+// Verbindung schließen
+$conn->close();
+die();
 }
 
 if (!(isset($_GET['months']))) {
@@ -80,11 +111,10 @@ $sql = "SELECT date, time, power_consumption, counter_reading
         ORDER BY date ASC, time ASC";
 }
 
-
-// Versuche das Statement auszuf�hren
+// Versuche das Statement auszufÜhren
 $result = $conn->query($sql);
 
-// �berpr�fe, ob Daten vorhanden sind
+// Überprüfe, ob Daten vorhanden sind
 if ($result->num_rows > 0) {
     $data = array();
     // Daten in Array speichern
@@ -96,6 +126,6 @@ if ($result->num_rows > 0) {
     echo json_encode(array());
 }
 
-// Verbindung schlie�en
+// Verbindung schließen
 $conn->close();
 ?>
