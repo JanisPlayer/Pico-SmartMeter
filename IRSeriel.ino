@@ -261,7 +261,7 @@ void setFlag(void) {
 }
 
 // ID für Identifikation
-bool deviceidIsOn = true;
+bool deviceidIsOn = false;
 const byte deviceid[] = { 0x00, 0x00, 0x00, 0x00 };
 
 bool useWiFiMode = false;
@@ -324,7 +324,7 @@ void setup() {
 
     // initialize SX1262 with default settings
     Serial.print(F("[SX1262] Initializing ... "));
-    int state = state = radio.begin(868.0, 125.0, 7, 5, 0x12, 1);;
+    int state = state = radio.begin(869.4, 250.0, 7, 5, 0x12, 1);;
     if (state == RADIOLIB_ERR_NONE) {
       Serial.println(F("success!"));
     } else {
@@ -381,11 +381,17 @@ void setup() {
  String hexValue = "";
 
 bool WiFiiConnecting = false;
+unsigned long scriptTimer = 0;
+unsigned long scriptTimerAfterSleep = 0;
 void loop() {
   //server.handleClient();
   unsigned long currentMillis = millis();
-  unsigned long scriptTimer = currentMillis;
-  
+  if(scriptTimerAfterSleep == 0)  {
+    scriptTimer = currentMillis;
+  } else {
+    scriptTimer = scriptTimerAfterSleep;
+  }
+
   if (WiFiiConnecting == false && useWiFiMode == true) {
      WiFiiConnecting = true;
      WiFi.mode(WIFI_STA);
@@ -541,7 +547,9 @@ void loop() {
               }
               WiFi.disconnect(true);
               WiFi.mode(WIFI_OFF);
-              sleep_ms(sleepTime-1000);
+              int scriptTimeSleep = (sleepTime - (millis() - scriptTimer)); //dont work
+              sleep_ms(scriptTimeSleep);
+              scriptTimerAfterSleep = millis();
             }
             if (useLoRaMode == true) {
               irDataBuffer = irDataBuffer.substring(0, 255);
@@ -566,7 +574,7 @@ void loop() {
               transmitFlag = true;
               irDataBuffer = "";
               previousMillis = currentMillis;
-              /* Geht auch auf einmal nicht mehr.
+              // Geht auch auf einmal nicht mehr.
               while (transmitFlag) {
                 if(operationDone) {
                   operationDone = false;
@@ -586,7 +594,7 @@ void loop() {
               }
               radio.sleep();
               
-              */
+              
               //int scriptTimeSleep = (sleepTime - (millis() - scriptTimer));
               //int scriptTimeSleep = (sleepTime - ((millis() - scriptTimer)+(changeTime*4)));
 
@@ -596,24 +604,29 @@ void loop() {
               sleep_ms(changeTime);
               vreg_set_voltage(VREG_VOLTAGE_0_95);
               */
+              
               //Serial.print(String(scriptTimeSleep));
 
-              //int scriptTimeSleep = (sleepTime - (scriptTimer - millis())-(changeTime*2)); //dont work
-              //if(scriptTimeSleep > 0) {
-                //Serial.print(String(scriptTimeSleep)); //Wieso geht es nicht wenn es hier ist.
-              //  sleep_ms(scriptTimeSleep-1000); //Ja die Funktion ist nur ein Platzhalter.
-              //} else {
+              // int scriptTimeSleep = ((sleepTime - (millis() - scriptTimer))-(changeTime*3)); //dont work
+              int scriptTimeSleep = (sleepTime - (millis() - scriptTimer)); //dont work
+              if(scriptTimeSleep > 0) {
+                Serial.print(String(scriptTimeSleep)); //Wieso geht es nicht wenn es hier ist.
+                sleep_ms(scriptTimeSleep); //Ja die Funktion ist nur ein Platzhalter.
+              } else {
                 sleep_ms(sleepTime-1000);
-              //}
+              }
+              scriptTimerAfterSleep = millis();
+              
+              //Lora crash hier, and the Loop dont work with if (currentMillis - previousMillis >= interval) {, but its works with SequenceStep = 10;
+              //Es ist einfach zu instabil, bei 10 MHz sollte vielleicht alles zu sicherheit neugestartet werden.
               /*
-              //Lora crash hier, and the Loop dont work with if (currentMillis - previousMillis >= interval) {, but its works with SequenceStep = 10; 
               vreg_set_voltage(VREG_VOLTAGE_DEFAULT);
               sleep_ms(changeTime);
               set_sys_clock_48mhz();
-              //sleep_ms(changeTime);
+              sleep_ms(changeTime);
               */
 
-              //radio.standby();
+              radio.standby();
 
               //sleep_hms(0,0,19);
             }
@@ -649,7 +662,8 @@ void loop() {
   } else {
     previousMillis = currentMillis;
   }*/
-
+  
+  /*
   // check if the previous operation finished
   if(operationDone) {
     // reset flag
@@ -686,9 +700,9 @@ void loop() {
       //transmissionState = radio.startTransmit(irDataBuffer);
       transmitFlag = true;
       irDataBuffer = "";
-      */
+      //*//*
     }
-  }
+  }*/
 }
 
 /*
