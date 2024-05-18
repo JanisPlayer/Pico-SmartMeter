@@ -248,8 +248,8 @@
             var formattedDate = localDate.toLocaleString(); // Datum und Zeit in lokaler Zeit formatieren
             dates.push(formattedDate);
             // alert(Math.abs(powerConsumptionsNew[i]));
-            if (Math.abs(data[i].power_consumption - powerConsumptionsNew[i - 1]) > 500) {
-              powerConsumptions.push(powerConsumptionsNew[i - 1]);
+            if (Math.abs(data[i].power_consumption - powerConsumptionsNew[i]) > 500) {
+              powerConsumptions.push(powerConsumptionsNew[i]);
             } else {
               powerConsumptions.push(data[i].power_consumption);
             }
