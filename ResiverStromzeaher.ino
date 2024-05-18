@@ -85,7 +85,7 @@ const int port = 80;
 String secret = "";
 
 // ID für Identifikation
-bool deviceidIsOn = true;
+bool deviceidIsOn = false;
 const byte deviceid[] = { 0x00, 0x00, 0x00, 0x00 };
 
 void setup() {
@@ -129,33 +129,23 @@ void setup() {
 
 
 /*
-void loop()
-{
-  switch(state)
-  {
-    case STATE_TX:
-      delay(1000);
-      /*txNumber++;
-      sprintf(txpacket,"hello %d, Rssi : %d",txNumber,Rssi);
-      Serial.printf("\r\nsending packet \"%s\" , length %d\r\n",txpacket, strlen(txpacket));
-      Radio.Send( (uint8_t *)txpacket, strlen(txpacket) );
-      state=LOWPOWER;
-      break;
-    case STATE_RX:
-      Serial.println("into RX mode");
-      Radio.Rx( 0 );
-      state=LOWPOWER;
-      break;
-    case LOWPOWER:
-      Radio.IrqProcess( );
-      break;
-    default:
-      break;
+
+unsigned long previousMillis = 0;
+unsigned long interval = 30000;
+void wifiReconnect() {
+  unsigned long currentMillis = millis();
+  if ((WiFi.status() != WL_CONNECTED) && (currentMillis - previousMillis >=interval)) {
+    Serial.print(millis());
+    Serial.println("Reconnecting to WiFi...");
+    WiFi.disconnect();
+    WiFi.reconnect();
+    previousMillis = currentMillis;
   }
 }
-*/
+
 void loop()
 {
+  wifiReconnect();
   if(lora_idle)
   {
     lora_idle = false;
@@ -175,7 +165,12 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
       rxpacket[size]='\0';
       Radio.Sleep();
       //Serial.printf("\r\nreceived packet \"%s\" with rssi %d , length %d\r\n",rxpacket,rssi,rxSize);
-
+        // Payload in Hexadezimal ausgeben
+        Serial.printf("\r\nreceived packet in hex: ");
+        for (uint16_t i = 0; i < size; i++) {
+            Serial.printf("%02X", payload[i]);
+        }
+        Serial.printf(" with rssi %d, length %d\r\n", rssi, rxSize);
       bool match = true;
       if (deviceidIsOn == true) {
         for (int i = 0; i <= 3; i++) {
