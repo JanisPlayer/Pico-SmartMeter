@@ -221,9 +221,10 @@
       }
     });
 
-    var DatenVolumeTotal = 10;
+    var SetDatenVolumeTotal = 10;
 
     function getDataMonat() {
+      DatenVolumeTotal = SetDatenVolumeTotal;
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
@@ -332,11 +333,13 @@
           //var latestbeforutcDate = new Date(data[lastEntryIndex - 1].date + 'T' + data[lastEntryIndex - 1].time + 'Z');
           //var unterschiedVerbrauch = data[lastEntryIndex].counter_reading - data[lastEntryIndex-1].counter_reading;
           //alert(unterschiedVerbrauch  * (60 / (latestutcDate  - latestbeforutcDate)) * 60 * 100);
+
+          var DatenVolumeTotal = SetDatenVolumeTotal;
           var DatenVolume = 10;
           var verbrauchHeute = (data[lastEntryIndex].counter_reading - data[0].counter_reading) / 10000;
           DatenVolume = DatenVolume - verbrauchHeute;
           var AllesVerbrauchtinZeit = DatenVolume * 1000 / Math.ceil(powerConsumptions[lastEntryIndex]) * 60;
-
+          //alert(AllesVerbrauchtinZeit)
           while (AllesVerbrauchtinZeit < 0) {
             DatenVolumeTotal = DatenVolumeTotal + 10;
             verbrauchHeute = (data[lastEntryIndex].counter_reading - data[0].counter_reading) / 10000;
