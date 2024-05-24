@@ -240,7 +240,8 @@
 
             document.getElementById('DatenvolumenMonat').innerHTML = 'Diesen Monat: <br>Verbrauchsvolumen: ' + (DatenVolumeTotal * daysInMonth).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen übrig: ' + ((DatenVolumeTotal * daysInMonth) -
               unterschiedVerbrauch).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen verbraucht: ' + unterschiedVerbrauch.toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen übrig pro Tag: ' + ((((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch)) /
-              (daysInMonth - today.getDate())).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen verbraucht pro Tag: ' + (unterschiedVerbrauch / (today.getDate() - firstutcDate)).toFixed(4) + ' kWh';
+              (daysInMonth - today.getDate())).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen verbraucht pro Tag: ' + (unterschiedVerbrauch / ((today.getDate() - firstutcDate) + (today.getHours() / 24) + (today.getMinutes() / 1440) + (today
+              .getSeconds() / 86400))).toFixed(4) + ' kWh';
           } else {
             document.getElementById('DatenvolumenMonat').innerHTML = 'Nicht genügend Daten verfügbar.';
           }
