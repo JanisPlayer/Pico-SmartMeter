@@ -50,6 +50,9 @@
       } else {
         updateValues = true;
       }
+    }
+
+    function updateValuesCheckBefor() {
       monthbefor = month;
       month = monthsAgo(day);
     }
@@ -59,6 +62,7 @@
         daybefor = day;
         day--
         updateValues = true;
+        updateValuesCheckBefor();
         getDataAndUpdateChart();
         updateValuesCheck();
       }
@@ -68,6 +72,7 @@
       daybefor = day;
       day++
       updateValues = true;
+      updateValuesCheckBefor();
       getDataAndUpdateChart();
       updateValuesCheck();
     }
@@ -105,12 +110,9 @@
       daybefor = day;
       day = dayDifference;
       updateValues = true;
+      updateValuesCheckBefor();
       getDataAndUpdateChart();
       updateValuesCheck();
-    }
-
-    if (month != monthbefor) {
-      getDataMonat();
     }
 
     var ctx = document.getElementById('myChart').getContext('2d');
@@ -231,18 +233,49 @@
           var data = JSON.parse(this.responseText);
 
           if (data.length >= 2) {
-            var unterschiedVerbrauch = (data[1].counter_reading - data[0].counter_reading) / 10000;
-            var firstutcDate = new Date(data[0].date + 'T' + data[0].time + 'Z').getDate() - 1;
+            var counterReadingFirst = data[0].counter_reading;
+            var counterReadingLast = data[1].counter_reading;
+            var unterschiedVerbrauch = (counterReadingLast - counterReadingFirst) / 10000;
+
+            var firstDate = new Date(data[0].date + 'T' + data[0].time + 'Z');
+            var lasttDate = new Date(data[1].date + 'T' + data[1].time + 'Z');
+            var firstUtcDate = firstDate.getDate() - 1;
+
             var today = new Date();
             var year = today.getFullYear();
-            var month = today.getMonth() + 1; // Monate sind nullbasiert
-            var daysInMonth = new Date(year, month, 0).getDate() - firstutcDate;
+            //var month = today.getMonth() + 1; // Monate sind nullbasiert, daher +1
+            var daysInMonth = new Date(year, month, 0).getDate() - firstUtcDate;
 
-            document.getElementById('DatenvolumenMonat').innerHTML = 'Diesen Monat: <br>Verbrauchsvolumen: ' + (DatenVolumeTotal * daysInMonth).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen übrig: ' + ((DatenVolumeTotal * daysInMonth) -
-              unterschiedVerbrauch).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen verbraucht: ' + unterschiedVerbrauch.toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen übrig pro Tag: ' + (((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch) /
-              ((daysInMonth + 1) - (today.getDate() - firstutcDate))).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen verbraucht pro Tag: ' + (unterschiedVerbrauch / (((today.getDate() - firstutcDate) + (today.getHours() / 24) + (today.getMinutes() /
-              1440) + (today
-              .getSeconds() / 86400)) - 1)).toFixed(4) + ' kWh';
+            var verbrauchsvolumenGesamt = (DatenVolumeTotal * daysInMonth).toFixed(4);
+            var verbrauchsvolumenUebrig = ((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch).toFixed(4);
+            var verbrauchsvolumenVerbraucht = unterschiedVerbrauch.toFixed(4);
+
+            var verbrauchsvolumenUebrigProTag = (((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch) / ((daysInMonth + 1) - (lasttDate.getDate() - firstUtcDate))).toFixed(4);
+            //var verbrauchsvolumenUebrigProTag = (((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch) / ((daysInMonth + 1) - (today.getDate() - firstUtcDate))).toFixed(4);
+
+            var daysPassed = lasttDate.getDate() - firstUtcDate;
+            var timeFraction = (lasttDate.getHours() / 24) + (lasttDate.getMinutes() / 1440) + (lasttDate.getSeconds() / 86400);
+            //var daysPassed = today.getDate() - firstUtcDate;
+            //var timeFraction = (today.getHours() / 24) + (today.getMinutes() / 1440) + (today.getSeconds() / 86400);
+            var verbrauchsvolumenVerbrauchtProTag = (unterschiedVerbrauch / (daysPassed)).toFixed(4);
+            var verbrauchsvolumenVerbrauchtProTagSchätzung = (unterschiedVerbrauch / (daysPassed + timeFraction - 1)).toFixed(4);
+
+
+            var verbrauchsvolumenText = 'Diesen Monat: <br>' +
+                                        'Verbrauchsvolumen: ' + verbrauchsvolumenGesamt + ' kWh <br>' +
+                                        'Verbrauchsvolumen übrig: ' + verbrauchsvolumenUebrig + ' kWh <br>' +
+                                        'Verbrauchsvolumen verbraucht: ' + verbrauchsvolumenVerbraucht + ' kWh <br>' +
+                                        'Verbrauchsvolumen übrig pro Tag: ' + verbrauchsvolumenUebrigProTag + ' kWh <br>' +
+                                        'Verbrauchsvolumen verbraucht pro Tag: ' + verbrauchsvolumenVerbrauchtProTag + ' kWh  <br>' +
+                                        'Verbrauchsvolumen verbraucht pro Tag (Schätzung): ' + verbrauchsvolumenVerbrauchtProTagSchätzung + ' kWh';
+
+            document.getElementById('DatenvolumenMonat').innerHTML = verbrauchsvolumenText;
+
+            // document.getElementById('DatenvolumenMonat').innerHTML = 'Diesen Monat: <br>Verbrauchsvolumen: ' + (DatenVolumeTotal * daysInMonth).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen übrig: ' + ((DatenVolumeTotal * daysInMonth) -
+            //   unterschiedVerbrauch).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen verbraucht: ' + unterschiedVerbrauch.toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen übrig pro Tag: ' + (((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch) /
+            //   ((daysInMonth + 1) - (today.getDate() - firstUtcDate))).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen verbraucht pro Tag: ' + (unterschiedVerbrauch / (((today.getDate() - firstUtcDate) + (today.getHours() / 24) + (today.getMinutes() /
+            //   1440) + (today
+            //   .getSeconds() / 86400)) - 1)).toFixed(4) + ' kWh';
           } else {
             document.getElementById('DatenvolumenMonat').innerHTML = 'Nicht genügend Daten verfügbar.';
           }
@@ -390,6 +423,10 @@
           myChart.data.datasets[1].data = counterReadings;
           myChart.data.datasets[0].data = powerConsumptionsNewNew;
           myChart.data.labels = dates;
+
+          if (month != monthbefor) {
+            getDataMonat();
+          }
           /*
           myChart.options = {
             //parsing: false,
