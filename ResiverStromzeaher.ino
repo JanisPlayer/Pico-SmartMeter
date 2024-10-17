@@ -105,7 +105,7 @@ void setup() {
     Serial.println("IP-Adresse: ");
     Serial.println(WiFi.localIP());
 
-    Mcu.begin();
+    Mcu.begin(HELTEC_BOARD,SLOW_CLK_TPYE);
     txNumber=0;
     Rssi=0;
 
