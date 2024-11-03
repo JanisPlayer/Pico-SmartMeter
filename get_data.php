@@ -39,6 +39,45 @@ if (isset($_GET['days']) && is_numeric($_GET['days'])) {
     }
 }
 
+function getSystemTimezone() {
+    $timezone = null;
+    
+    if (file_exists('/etc/timezone')) {
+        $timezone = trim(file_get_contents('/etc/timezone'));
+    } elseif (file_exists('/etc/localtime')) {
+        // Alternative Methode, falls /etc/timezone nicht existiert
+        $tz = timezone_name_from_abbr('', @filemtime('/etc/localtime'), 0);
+        if ($tz !== false) {
+            $timezone = $tz;
+        }
+    }
+
+    return $timezone ?: 'UTC';
+}
+
+date_default_timezone_set(getSystemTimezone());
+
+function getOffsetDaysAgo($days, $timezone = null) {
+    // Standardmäßig die Systemzeitzone verwenden, wenn keine Zeitzone angegeben wurde
+    if ($timezone === null) {
+        $timezone = date_default_timezone_get();
+    }
+
+    // Datum berechnen: aktuelles Datum minus die angegebene Anzahl von Tagen
+    $date = new DateTime("now - $days days", new DateTimeZone($timezone));
+    $offsetSeconds = $date->getOffset();
+
+    // Offset in Stunden und Minuten umrechnen
+    $offsetHours = intdiv($offsetSeconds, 3600);
+    $offsetMinutes = ($offsetSeconds % 3600) / 60;
+
+    // Offset im Format ±HH:MM darstellen
+    $offsetFormatted = "'" . sprintf("%+03d:%02d", $offsetHours, abs($offsetMinutes)) . "'";
+    return $offsetFormatted;
+}
+
+//$offset = getOffsetDaysAgo($days, 'Europe/Berlin');
+
 $months = 0;
 
 // Überprüfen, ob ein GET-Parameter übergeben wurde und ob er eine gültige Zahl ist
