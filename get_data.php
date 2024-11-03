@@ -51,15 +51,15 @@ if (isset($_GET['months']) && is_numeric($_GET['months'])) {
     // SQL-Abfragen für die ersten und letzten Werte des Monats
     $sql_first = "SELECT date, time, power_consumption, counter_reading
                   FROM power_consumption
-                  WHERE DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', '+02:00')) >= LAST_DAY(CURDATE() - INTERVAL $months MONTH) + INTERVAL 1 DAY - INTERVAL 1 MONTH
-                  AND DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', '+02:00')) < LAST_DAY(CURDATE() - INTERVAL $months MONTH) + INTERVAL 1 DAY
+                  WHERE DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', @@session.time_zone)) >= LAST_DAY(CURDATE() - INTERVAL $months MONTH) + INTERVAL 1 DAY - INTERVAL 1 MONTH
+                  AND DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', @@session.time_zone)) < LAST_DAY(CURDATE() - INTERVAL $months MONTH) + INTERVAL 1 DAY
                   ORDER BY date ASC, time ASC
                   LIMIT 1";
 
     $sql_last = "SELECT date, time, power_consumption, counter_reading
                  FROM power_consumption
-                 WHERE DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', '+02:00')) >= LAST_DAY(CURDATE() - INTERVAL $months MONTH) + INTERVAL 1 DAY - INTERVAL 1 MONTH
-                 AND DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', '+02:00')) < LAST_DAY(CURDATE() - INTERVAL $months MONTH) + INTERVAL 1 DAY
+                 WHERE DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', @@session.time_zone)) >= LAST_DAY(CURDATE() - INTERVAL $months MONTH) + INTERVAL 1 DAY - INTERVAL 1 MONTH
+                 AND DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', @@session.time_zone)) < LAST_DAY(CURDATE() - INTERVAL $months MONTH) + INTERVAL 1 DAY
                  ORDER BY date DESC, time DESC
                  LIMIT 1";
 
@@ -92,7 +92,7 @@ if (isset($_GET['months']) && is_numeric($_GET['months'])) {
 // Standardabfrage, wenn keine Monate angegeben sind
 $sql = "SELECT date, time, power_consumption, counter_reading
         FROM power_consumption
-        WHERE DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', '+02:00')) = CURDATE() - INTERVAL $days DAY
+        WHERE DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', @@session.time_zone)) = CURDATE() - INTERVAL $days DAY
         ORDER BY date ASC, time ASC";
 
 // Versuche das Statement auszuführen
