@@ -1,4 +1,4 @@
-/* Heltec Automation Ping Pong communication test example
+/media/nvme0n1p2/Users/janis/Documents/Arduino/ResiverStromzeaher/* Heltec Automation Ping Pong communication test example
  *
  * Function:
  * 1. Ping Pong communication in two esp32 device.
@@ -24,11 +24,11 @@
 #include <WiFiClient.h>
 
 
-#define RF_FREQUENCY                                868000000 // Hz
+#define RF_FREQUENCY                                869400000 // Hz
 
 #define TX_OUTPUT_POWER                             1        // dBm
 
-#define LORA_BANDWIDTH                              0         // [0: 125 kHz,
+#define LORA_BANDWIDTH                              1         // [0: 125 kHz,
                                                               //  1: 250 kHz,
                                                               //  2: 500 kHz,
                                                               //  3: Reserved]
@@ -127,9 +127,6 @@ void setup() {
     state=STATE_TX;
 }
 
-
-/*
-
 unsigned long previousMillis = 0;
 unsigned long interval = 30000;
 void wifiReconnect() {
@@ -184,14 +181,15 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
       if (match) {
         if (deviceidIsOn == true) {
           currentPKwh = ((long)payload[4] << 24 | (long)payload[5] << 16 | (long)payload[6] << 8 | (long)payload[7]);
-          dblcurrentPKwh = (double)currentPKwh / 10000;
           //Aktuelle leistung in Watt
           currentPW = ((long)payload[8] << 24 | (long)payload[9] << 16 | (long)payload[10] << 8 | (long)payload[11]);
         } else {
           currentPKwh = ((long)payload[0] << 24 | (long)payload[1] << 16 | (long)payload[2] << 8 | (long)payload[3]);
-          dblcurrentPKwh = (double)currentPKwh / 10000;
           //Aktuelle leistung in Watt
           currentPW = ((long)payload[4] << 24 | (long)payload[5] << 16 | (long)payload[6] << 8 | (long)payload[7]);
+        }
+        if (currentPKwh > 0) {
+          dblcurrentPKwh = (double)currentPKwh / 10000.0;
         }
         String irDataBuffer = String(currentPW) + " " + String(dblcurrentPKwh);
         Serial.print(irDataBuffer);

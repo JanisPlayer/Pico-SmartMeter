@@ -364,7 +364,7 @@ void loop() {
                 }
                 delay(1);
               }
-              radio.sleep();
+              radio.sleep(false);
 
               int scriptTimeSleep = (sleepTime - (millis() - scriptTimer));
               if(scriptTimeSleep > 0) {

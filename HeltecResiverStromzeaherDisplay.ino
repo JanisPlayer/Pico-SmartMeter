@@ -233,15 +233,14 @@ void OnRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
       if (match) {
         if (deviceidIsOn == true) {
           currentPKwh = ((long)payload[4] << 24 | (long)payload[5] << 16 | (long)payload[6] << 8 | (long)payload[7]);
-          dblcurrentPKwh = (double)currentPKwh / 10000;
           //Aktuelle leistung in Watt
           currentPW = ((long)payload[8] << 24 | (long)payload[9] << 16 | (long)payload[10] << 8 | (long)payload[11]);
         } else {
           currentPKwh = ((long)payload[0] << 24 | (long)payload[1] << 16 | (long)payload[2] << 8 | (long)payload[3]);
-          dblcurrentPKwh = (double)currentPKwh / 10000;
           //Aktuelle leistung in Watt
           currentPW = ((long)payload[4] << 24 | (long)payload[5] << 16 | (long)payload[6] << 8 | (long)payload[7]);
         }
+        dblcurrentPKwh = (double)currentPKwh / 10000;
         String irDataBuffer = String(currentPW) + " " + String(dblcurrentPKwh);
         factory_display.clear();
         factory_display.drawString(0, 0, irDataBuffer);

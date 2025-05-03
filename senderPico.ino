@@ -592,7 +592,7 @@ void loop() {
                 }
                 sleep_ms(1);
               }
-              radio.sleep(); // Maybe it needs a sleep afterwards https://github.com/jgromes/RadioLib/issues/42
+              radio.sleep(false); // Maybe it needs a sleep afterwards https://github.com/jgromes/RadioLib/issues/42
               
               
               //int scriptTimeSleep = (sleepTime - (millis() - scriptTimer));
