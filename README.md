@@ -14,6 +14,8 @@ The ESP32 in [senderESP32.ino](https://github.com/JanisPlayer/Pico-SmartMeter/bl
 
 During testing, a runtime of approximately two months was observed. This can potentially be improved by completely powering down the LoRa module during ESP32 deep sleep using a MOSFET or transistor.
 
+An additional idea for encryption: replay protection via a time-linked client ID. The Unix timestamp can be requested from the target client with internet access.
+
 # Pico-SmartMeter
 
 SmartMeter über LoRa und WiFi mit grafischer Benutzeroberfläche
@@ -29,5 +31,7 @@ Zum Empfangen kann die Datei [`RadioLibHTTPSResiverStromzeaher.ino`](https://git
 Für den ESP32 in [senderESP32.ino](https://github.com/JanisPlayer/Pico-SmartMeter/blob/main/senderESP32.ino) wird DeepSleep genutzt. Diese Version basiert auf [senderPico.ino](https://github.com/JanisPlayer/Pico-SmartMeter/blob/main/senderPico.ino) für den Pico. Eine RTC ist nötig, um nach dem Aufwachen die Zeit zu messen, allerdings muss diese Lösung noch implementiert werden. Aktuell wird die Zeit geschätzt. Hier eine grobe Schätzung: 51 Sekunden (85 %) pro Minute DeepSleep und 9 Sekunden (15 %) aktiv. (25 mA × 0,15 = 3,75 mA) + (0,01 mA × 0,85 = 0,0085 mA) = 3,7585 mA. Das könnte durch späteres Senden und Zwischenspeichern im RTC-RAM oder durch minütliche Intervalle verbessert werden, sowie durch das Weglassen der Boot-Verifikation. 10.000 mAh können so also circa 110 Tage halten.
 
 In Tests wurde eine Laufzeit von etwa zwei Monaten festgestellt. Diese könnte verbessert werden, wenn das LoRa-Modul beim Einsatz mit einem ESP32 mithilfe eines MOSFETs oder Transistors im Deep-Sleep-Modus vollständig abgeschaltet wird.
+
+Idee zusätzlich zur Verschlüsselung: Replay-Schutz über zeitverknüpfte Client-ID. Der Unix-Timestamp kann vom Ziel-Client mit Internetzugang angefordert werden.
 
 ![SmartMeter WebPage](https://github.com/JanisPlayer/Pico-SmartMeter/assets/54918417/dcb32c20-5dc7-4233-99b6-c9854a775582)
