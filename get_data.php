@@ -1,4 +1,19 @@
 <?php
+
+// Definiere das Passwort
+$requiredPassword = 'password';
+
+// Überprüfe, ob das Passwort im GET-Request vorhanden ist
+if (!isset($_GET['password']) || $_GET['password'] !== $requiredPassword) {
+    echo json_encode(['error' => 'wrong password']);
+    exit;
+} else { // Else don't needed if use exit. Actually, that's unnecessary.
+    if (isset($_GET['check_password_info'])) {
+        echo json_encode(['success' => 'password successful']);
+        exit;
+    }
+}
+
 // Zugangsdaten zur Datenbank
 $servername = "localhost";
 $username = "stromzeahleruser";

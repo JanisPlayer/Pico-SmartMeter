@@ -17,6 +17,16 @@
 
 <body>
   <div class="container">
+    <!-- Passwort-Formular -->
+    <div class="password-form" id="passwordForm" style="display: none;">
+      <div class="password-container">
+        <button class="password-close" id="passwordClose">X</button>
+        <h3>Passwort eingeben</h3>
+        <input type="password" id="passwordInput" class="password-input" placeholder="Passwort">
+        <button class="password-submit" id="passwordSubmit">Einloggen</button>
+      </div>
+    </div>
+
     <h1>Stromverbrauchsanzeige</h1>
     <div class="myChartDiv">
       <canvas id="myChart" width="600" height="400"></canvas>
@@ -43,6 +53,9 @@
     var monthbefor = 0;
     var day = 0;
     var daybefor = 0;
+    var ansicht = 0;
+    var APIaccess = false;
+    var APIpassword = ""
 
     function updateValuesCheck() {
       if (day > 0) {
@@ -228,7 +241,7 @@
     function getDataMonat() {
       DatenVolumeTotal = SetDatenVolumeTotal;
       var xhttp = new XMLHttpRequest();
-      xhttp.onreadystatechange = function() {
+      xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
           var data = JSON.parse(this.responseText);
 
@@ -262,12 +275,12 @@
 
 
             var verbrauchsvolumenText = 'Diesen Monat: <br>' +
-                                        'Verbrauchsvolumen: ' + verbrauchsvolumenGesamt + ' kWh <br>' +
-                                        'Verbrauchsvolumen übrig: ' + verbrauchsvolumenUebrig + ' kWh <br>' +
-                                        'Verbrauchsvolumen verbraucht: ' + verbrauchsvolumenVerbraucht + ' kWh <br>' +
-                                        'Verbrauchsvolumen übrig pro Tag: ' + verbrauchsvolumenUebrigProTag + ' kWh <br>' +
-                                        'Verbrauchsvolumen verbraucht pro Tag: ' + verbrauchsvolumenVerbrauchtProTag + ' kWh  <br>' +
-                                        'Verbrauchsvolumen verbraucht pro Tag (Schätzung): ' + verbrauchsvolumenVerbrauchtProTagSchätzung + ' kWh';
+              'Verbrauchsvolumen: ' + verbrauchsvolumenGesamt + ' kWh <br>' +
+              'Verbrauchsvolumen übrig: ' + verbrauchsvolumenUebrig + ' kWh <br>' +
+              'Verbrauchsvolumen verbraucht: ' + verbrauchsvolumenVerbraucht + ' kWh <br>' +
+              'Verbrauchsvolumen übrig pro Tag: ' + verbrauchsvolumenUebrigProTag + ' kWh <br>' +
+              'Verbrauchsvolumen verbraucht pro Tag: ' + verbrauchsvolumenVerbrauchtProTag + ' kWh  <br>' +
+              'Verbrauchsvolumen verbraucht pro Tag (Schätzung): ' + verbrauchsvolumenVerbrauchtProTagSchätzung + ' kWh';
 
             document.getElementById('DatenvolumenMonat').innerHTML = verbrauchsvolumenText;
 
@@ -282,7 +295,7 @@
         }
       };
 
-      xhttp.open("GET", "./get_data.php?months=" + month, true);
+      xhttp.open("GET", "./get_data.php?months=" + month + "&password=" + APIpassword, true);
       xhttp.send();
     }
 
@@ -291,7 +304,7 @@
         return 0;
       }
       var xhttp = new XMLHttpRequest();
-      xhttp.onreadystatechange = function() {
+      xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
           var data = JSON.parse(this.responseText);
           if (data.length === 0) {
@@ -597,7 +610,7 @@
           // });
         }
       };
-      xhttp.open("GET", "./get_data.php?days=" + day, true);
+      xhttp.open("GET", "./get_data.php?days=" + day + "&password=" + APIpassword, true);
       xhttp.send();
     }
 
@@ -619,10 +632,62 @@
       }
       // Alle 20 Sekunden aufrufen
     }
-    getDataMonat();
+
+    // Passwort-Formular schließen
+    document.getElementById('passwordClose').addEventListener('click', function () {
+      document.getElementById('passwordForm').style.display = 'none';
+    });
+
+    // Passwort eingeben
+    document.getElementById('passwordSubmit').addEventListener('click', async function () {
+      APIpassword = document.getElementById('passwordInput').value;
+      try {
+        const response = await fetch('get_data.php?password=' + APIpassword + '&check_password_info=true', { method: 'GET' });
+        const result = await response.json();
+        alert(result.success || result.error);
+        if (result.error == "wrong password") {
+          localStorage.removeItem('passwordEntered');
+          localStorage.removeItem('uploadPassword');
+          document.getElementById('passwordForm').style.display = 'flex';
+        }
+
+        if (result.success == "password successful") {
+          // Passwort speichern & Overlay entfernen
+          localStorage.setItem('APIpassword', APIpassword);
+          localStorage.setItem('passwordEntered', 'true');
+          document.getElementById('passwordForm').style.display = 'none';
+          APIaccess = true;
+          Init();
+        }
+      } catch (error) {
+        alert('Fehlgeschlagen.');
+      }
+    });
+
+    function open_login_form() {
+      document.getElementById('passwordForm').style.display = 'flex';
+    }
+
+    if (localStorage.getItem('passwordEntered')) {
+      const storedAPIPassword = localStorage.getItem('APIpassword');
+      if (storedAPIPassword) {
+        APIpassword = storedAPIPassword;
+        APIaccess = true;
+      }
+    }
+
     // Initial aufrufen
-    getDataAndUpdateChart();
     var waitDataTimer = setInterval(waitData, 100);
+    Init();
+
+    function Init() {
+      if (APIaccess == true) {
+        getDataMonat();
+        getDataAndUpdateChart();
+      } else {
+        open_login_form()
+      }
+    }
   </script>
 </body>
 
