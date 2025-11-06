@@ -1,6 +1,7 @@
 # Pico-SmartMeter
 
-SmartMeter over LoRa and WiFi with a graphical user interface.
+SmartMeter over LoRa and WiFi with a graphical user interface.  
+👉 A detailed **making-of article** can be found [here](https://heldendesbildschirms.de/artikel/stromzaehler-auslesen-mit-dem-pico-daten-ueber-lora-senden/).
 
 This [project](https://www.ploesch.de/index.php?side=g-electricmeter) is a modified version tailored by me for the Pico with the LoRa module. I have created my own web interface.
 
@@ -13,12 +14,19 @@ For receiving data, you can use the [`RadioLibHTTPSResiverStromzeaher.ino`](http
 The ESP32 in [senderESP32.ino](https://github.com/JanisPlayer/Pico-SmartMeter/blob/main/senderESP32.ino) uses DeepSleep. This version is based on [senderPico.ino](https://github.com/JanisPlayer/Pico-SmartMeter/blob/main/senderPico.ino) for the Pico. An RTC is required to measure the time after waking up, but this solution still needs to be implemented. Currently, the time is estimated. Here is a rough estimate: 51 seconds (85%) per minute DeepSleep, and 9 seconds (15%) active. (25 mA × 0,15 = 3,75 mA) + (0,01 mA × 0,85 = 0,0085 mA) = 3,7585 mA. This could be improved by later transmission and intermediate storage in RTC RAM, or by minute intervals, and by skipping boot verification. 10.000 mAh could last for about 110 days this way.
 
 During testing, a runtime of approximately two months was observed. This can potentially be improved by completely powering down the LoRa module during ESP32 deep sleep using a MOSFET or transistor.
+Note: The specified maximum capacity (mAh) has not been verified to actually reach 10 000 mAh, nor whether the cell quality matches the seller’s claims.
+It is possible that these values are slightly exaggerated due to the physical size of the cells, and the real capacity may only be between 6000 and 8000 mAh.
+
+I have created a test version, [sender_ESP32_NiMH_Battery.ino](https://github.com/JanisPlayer/Pico-SmartMeter/blob/main/sender_ESP32_NiMH_Battery.ino), optimized for the Heltec Wireless Stick (V3) and designed to run on three AAA NiMH cells.
+This configuration aims to provide an absolutely safe alternative without LiPo, requiring no active monitoring.
+Currently, it transmits only every 20 minutes, but it is also possible to use a LiFePO₄ battery, which would make the setup more compact and provide more stable voltage.
 
 An additional idea for encryption: replay protection via a time-linked client ID. The Unix timestamp can be requested from the target client with internet access.
 
 # Pico-SmartMeter
 
-SmartMeter über LoRa und WiFi mit grafischer Benutzeroberfläche
+SmartMeter über LoRa und WiFi mit grafischer Benutzeroberfläche  
+👉 Einen ausführlichen **Making-of-Artikel** findest du [hier](https://heldendesbildschirms.de/artikel/stromzaehler-auslesen-mit-dem-pico-daten-ueber-lora-senden/).
 
 Dieses [Projekt](https://www.ploesch.de/index.php?side=g-electricmeter) ist eine modifizierte Version, die von mir für den Pico mit dem LoRa-Modul angepasst wurde. Ich habe eine eigene Web-Oberfläche erstellt.
 
@@ -31,6 +39,13 @@ Zum Empfangen kann die Datei [`RadioLibHTTPSResiverStromzeaher.ino`](https://git
 Für den ESP32 in [senderESP32.ino](https://github.com/JanisPlayer/Pico-SmartMeter/blob/main/senderESP32.ino) wird DeepSleep genutzt. Diese Version basiert auf [senderPico.ino](https://github.com/JanisPlayer/Pico-SmartMeter/blob/main/senderPico.ino) für den Pico. Eine RTC ist nötig, um nach dem Aufwachen die Zeit zu messen, allerdings muss diese Lösung noch implementiert werden. Aktuell wird die Zeit geschätzt. Hier eine grobe Schätzung: 51 Sekunden (85 %) pro Minute DeepSleep und 9 Sekunden (15 %) aktiv. (25 mA × 0,15 = 3,75 mA) + (0,01 mA × 0,85 = 0,0085 mA) = 3,7585 mA. Das könnte durch späteres Senden und Zwischenspeichern im RTC-RAM oder durch minütliche Intervalle verbessert werden, sowie durch das Weglassen der Boot-Verifikation. 10.000 mAh können so also circa 110 Tage halten.
 
 In Tests wurde eine Laufzeit von etwa zwei Monaten festgestellt. Diese könnte verbessert werden, wenn das LoRa-Modul beim Einsatz mit einem ESP32 mithilfe eines MOSFETs oder Transistors im Deep-Sleep-Modus vollständig abgeschaltet wird.
+Hinweis: Es wurde nicht überprüft, ob die Angaben zur maximalen Kapazität (mAh) tatsächlich bei 10 000 mAh liegen und ob die Zellqualität den Angaben des Händlers entspricht.
+Es ist möglich, dass diese Werte aufgrund der Baugröße etwas übertrieben angegeben wurden und die tatsächliche Kapazität nur zwischen 6000 und 8000 mAh liegt.
+
+Ich habe eine Testversion [sender_ESP32_NiMH_Battery.ino](https://github.com/JanisPlayer/Pico-SmartMeter/blob/main/sender_ESP32_NiMH_Battery.ino) erstellt, die für den Heltec Wireless Stick (V3) optimiert ist und auf die Nutzung von 3 × AAA NiMH-Akkus ausgelegt wurde.
+Diese Variante soll eine absolut sichere Lösung ohne LiPo darstellen, die keine Überwachung benötigt.
+Momentan sendet sie allerdings nur alle 20 Minuten.
+Alternativ kann auch ein LiFePO₄-Akku verwendet werden, was das System kompakter macht und die Spannung stabilisiert.
 
 Idee zusätzlich zur Verschlüsselung: Replay-Schutz über zeitverknüpfte Client-ID. Der Unix-Timestamp kann vom Ziel-Client mit Internetzugang angefordert werden.
 
