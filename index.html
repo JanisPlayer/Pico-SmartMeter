@@ -333,20 +333,18 @@
             var latestutcDate = new Date(data[i].date + 'T' + data[i].time + 'Z'); // Datum und Zeit in UTC konvertieren
 
             if (i != 0 && i != Auflösung) {
-              var latestbeforutcDate = new Date(data[i - Auflösung].date + 'T' + data[i - Auflösung].time + 'Z'); // Datum und Zeit in UTC konvertieren
+              var latestbeforutcDate = new Date(data[i - Auflösung].date + 'T' + data[i - Auflösung].time + 'Z');
               var unterschiedVerbrauch = data[i].counter_reading - data[i - Auflösung].counter_reading;
               var power_consumptionNe
-              if (((latestutcDate - latestbeforutcDate) / 1000) <= 60) {
+              if (((latestutcDate - latestbeforutcDate) / 1000) <= 3600) { // Bei mehr als 1 Stunde ohne Daten wird keine Leistung hochgerechnet.
                 power_consumptionNew = (unterschiedVerbrauch) * (60 / ((latestutcDate - latestbeforutcDate) / (100))) * 60;
               } else {
                 power_consumptionNew = Math.ceil(unterschiedVerbrauch)
+                
               }
-              //var power_consumptionNew = (unterschiedVerbrauch)  * (60 / ((latestutcDate  - latestbeforutcDate))) * 60 * 100;
-              //var power_consumptionNew = (unterschiedVerbrauch)  * (60 / ((latestutcDate  - latestbeforutcDate) / 10000)) * 60 / 100;
 
               powerConsumptionsNew.push(power_consumptionNew);
             } else {
-              //  powerConsumptionsNew.push(data[Auflösung + Auflösung].counter_reading - data[Auflösung].counter_reading)
               powerConsumptionsNew.push(data[1].counter_reading - data[0].counter_reading)
             }
 
@@ -355,7 +353,7 @@
             var formattedDate = localDate.toLocaleString(); // Datum und Zeit in lokaler Zeit formatieren
             dates.push(formattedDate);
             // alert(Math.abs(powerConsumptionsNew[i]));
-            if (Math.abs(data[i].power_consumption - powerConsumptionsNew[i]) > 500) {
+            if (Math.abs(data[i].power_consumption - powerConsumptionsNew[i]) > 500) { // Bei mehr als 500 Watt Unterschied wird der errechnete Verbrauch angezeigt.
               powerConsumptions.push(powerConsumptionsNew[i]);
             } else {
               powerConsumptions.push(data[i].power_consumption);

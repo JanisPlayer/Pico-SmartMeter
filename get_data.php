@@ -144,10 +144,47 @@ if (isset($_GET['months']) && is_numeric($_GET['months'])) {
 }
 
 // Standardabfrage, wenn keine Monate angegeben sind
+/*
 $sql = "SELECT date, time, power_consumption, counter_reading
         FROM power_consumption
         WHERE DATE(CONVERT_TZ(CONCAT(date, ' ', time), '+00:00', @@session.time_zone)) = CURDATE() - INTERVAL $days DAY
         ORDER BY date ASC, time ASC";
+*/
+
+/*
+$target_date = date('Y-m-d', strtotime("-$days days"));
+$sql = "SELECT date, time, power_consumption, counter_reading
+        FROM power_consumption
+        WHERE date = '$target_date'
+        ORDER BY time ASC";
+*/
+
+$tzLocal = new DateTimeZone(date_default_timezone_get());
+$tzUtc   = new DateTimeZone('UTC');
+
+$day = new DateTime('now', $tzLocal);
+$day->modify("-$days days");
+
+$startLocal = (clone $day)->setTime(0, 0, 0);
+$endLocal   = (clone $startLocal)->modify('+1 day');
+
+$startUtc = (clone $startLocal)->setTimezone($tzUtc);
+$endUtc   = (clone $endLocal)->setTimezone($tzUtc);
+
+$startDate = $startUtc->format('Y-m-d');
+$startTime = $startUtc->format('H:i:s');
+
+$endDate = $endUtc->format('Y-m-d');
+$endTime = $endUtc->format('H:i:s');
+
+$sql = "
+SELECT date, time, power_consumption, counter_reading
+FROM power_consumption
+WHERE 
+    (date > '$startDate' OR (date = '$startDate' AND time >= '$startTime'))
+AND (date < '$endDate'   OR (date = '$endDate'   AND time <  '$endTime'))
+ORDER BY date ASC, time ASC
+";
 
 // Versuche das Statement auszuführen
 $result = $conn->query($sql);
