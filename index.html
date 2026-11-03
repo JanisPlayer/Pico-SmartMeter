@@ -1,18 +1,403 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" id="htmlRoot">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stromverbrauchsanzeige</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.4/moment.min.js"></script> -->
-  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.0/chartjs-adapter-moment.min.js"></script> -->
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-  <!-- <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@0.7.7/dist/chartjs-plugin-zoom.min.js"></script> -->
-  <!-- <script src="https://npmcdn.com/chart.js@3.7.1/dist/chart.min.js"></script> -->
-  <!-- <script src="https://npmcdn.com/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script> -->
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 16px;
+      background-color: #fafafa;
+      color: #222;
+    }
+
+    .container {
+      max-width: 1050px;
+      margin: 0 auto;
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .lang-btn {
+      font-weight: bold;
+      padding: 6px 12px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      cursor: pointer;
+    }
+
+    .lang-btn:hover {
+      background-color: #f0f0f0;
+    }
+
+    .myChartDiv {
+      position: relative;
+      width: 100%;
+      height: 420px;
+      margin-bottom: 12px;
+      background: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s ease;
+    }
+
+    .myChartDiv canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* Vollbild-Modus für das Diagramm */
+    .myChartDiv.fullscreen-mode {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      z-index: 950;
+      margin: 0;
+      border-radius: 0;
+      padding: 12px 8px 48px 8px;
+      background: #fff;
+    }
+
+    /* Schwebender Button am unteren Rand im Vollbildmodus */
+    .fs-overlay-toggle {
+      display: none;
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 960;
+      background: rgba(33, 150, 243, 0.92);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-size: 13px;
+      font-weight: bold;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .myChartDiv.fullscreen-mode .fs-overlay-toggle {
+      display: inline-block;
+    }
+
+    .myChartDiv.fullscreen-mode .fs-overlay-toggle.hidden-toggle {
+      display: none;
+    }
+
+    /* Überblendete Steuerung im Vollbildmodus (Drawer von unten) */
+    .fs-controls-drawer {
+      display: none;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(6px);
+      border-top: 1px solid #ddd;
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.18);
+      padding: 12px 16px;
+      z-index: 970;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .myChartDiv.fullscreen-mode .fs-controls-drawer.open {
+      display: flex;
+    }
+
+    .fs-drawer-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .fs-slider-wrap {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 220px;
+      max-width: 380px;
+    }
+
+    .myButton,
+    .controls,
+    .top-panels {
+      margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 12px;
+    }
+
+    .myButton,
+    .controls {
+      align-items: center;
+    }
+
+    button {
+      padding: 7px 14px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #f0f0f0;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background-color: #e2e2e2;
+    }
+
+    input[type="date"],
+    input[type="number"] {
+      padding: 6px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .panel-box {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: #fff;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    .view-slider-box {
+      flex: 1 1 280px;
+      min-width: 260px;
+      max-width: 400px;
+    }
+
+    .settings-box {
+      flex: 2 1 380px;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .setting-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+    }
+
+    .setting-item label {
+      font-weight: bold;
+      color: #444;
+    }
+
+    .setting-item input[type="number"] {
+      width: 110px;
+    }
+
+    .setting-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      margin-right: 4px;
+    }
+
+    .setting-checkbox input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .cost-inputs-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .view-slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .view-slider-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #555;
+      margin-top: 6px;
+    }
+
+    .view-slider-labels span {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .view-slider-labels span.active-label {
+      color: #000;
+      font-weight: bold;
+    }
+
+    #Datenvolumen,
+    #DatenvolumenMonat,
+    #DatenvolumenJahr {
+      margin-top: 12px;
+      padding: 12px 16px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .year-progress-wrap {
+      margin: 8px 0 10px 0;
+      background: #eee;
+      border-radius: 6px;
+      height: 10px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .year-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #2196F3, #00bcd4);
+      border-radius: 6px;
+      transition: width 0.3s ease;
+    }
+
+    /* Passwort-Overlay */
+    .password-form {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.55);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .password-container {
+      position: relative;
+      background: #fff;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 260px;
+      max-width: 90vw;
+    }
+
+    .password-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: transparent;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .password-input {
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .password-submit {
+      padding: 8px;
+      background: #2196F3;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+
+    .password-submit:hover {
+      background: #1976D2;
+    }
+
+    /* Smartphone & kleine Bildschirme */
+    @media (max-width: 640px) {
+      body {
+        margin: 8px;
+      }
+
+      h1 {
+        font-size: 21px;
+      }
+
+      .myChartDiv {
+        height: 310px;
+        padding: 6px 4px;
+      }
+
+      .view-slider-box,
+      .settings-box {
+        max-width: 100%;
+        width: 100%;
+        flex: 1 1 100%;
+      }
+
+      .setting-item {
+        flex: 1 1 45%;
+      }
+
+      .setting-item input[type="number"] {
+        width: 100%;
+      }
+
+      .controls {
+        gap: 8px;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -21,44 +406,605 @@
     <div class="password-form" id="passwordForm" style="display: none;">
       <div class="password-container">
         <button class="password-close" id="passwordClose">X</button>
-        <h3>Passwort eingeben</h3>
+        <h3 id="pwdTitle">Passwort eingeben</h3>
         <input type="password" id="passwordInput" class="password-input" placeholder="Passwort">
         <button class="password-submit" id="passwordSubmit">Einloggen</button>
       </div>
     </div>
 
-    <h1>Stromverbrauchsanzeige</h1>
-    <div class="myChartDiv">
-      <canvas id="myChart" width="600" height="400"></canvas>
+    <div class="header-row">
+      <h1 id="pageTitle">Stromverbrauchsanzeige</h1>
+      <button class="lang-btn" id="btnLanguage" onclick="toggleLanguage()">🌐 DE | EN</button>
     </div>
+
+    <div class="myChartDiv" id="chartContainer">
+      <canvas id="myChart"></canvas>
+
+      <!-- Schwebender Button im Vollbild-Modus (auch per Hochwischen erreichbar) -->
+      <button class="fs-overlay-toggle" id="fsOverlayToggle" onclick="toggleFsDrawer(true)">▲ Steuerung</button>
+
+      <!-- Überblendbares Steuerungs-Menü im Vollbild-Modus -->
+      <div class="fs-controls-drawer" id="fsControlsDrawer">
+        <div class="fs-drawer-row">
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+            <button id="fsBtnBack" onclick="beforDay()">⬅ Zurück</button>
+            <button id="fsBtnNext" onclick="nextDay()">Vor ➡</button>
+            <button id="fsBtnResetZoom" onclick="resetZoom()">Reset Zoom</button>
+            <input type="date" id="fsDatepicker" onchange="syncDatepickerFromFs(this.value)">
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="fsBtnHide" onclick="toggleFsDrawer(false)">▼ Ausblenden</button>
+            <button id="fsBtnExit" onclick="toggleFullscreen()" style="background:#e53935; color:#fff; border-color:#c62828;">✕ Vollbild beenden</button>
+          </div>
+        </div>
+        <div class="fs-drawer-row">
+          <div class="fs-slider-wrap">
+            <div class="view-slider-header">
+              <span><span id="fsViewPrefix">Ansicht:</span> <strong id="fsAnsichtName">Tag</strong></span>
+              <span id="fsPeriodLabel" style="font-weight: normal; color: #555;"></span>
+            </div>
+            <input type="range" id="fsAnsichtSlider" min="0" max="3" step="1" value="0" oninput="setAnsicht(this.value)">
+            <div class="view-slider-labels">
+              <span id="fsLabelAnsicht0" onclick="setAnsicht(0)">Tag</span>
+              <span id="fsLabelAnsicht1" onclick="setAnsicht(1)">Monat</span>
+              <span id="fsLabelAnsicht2" onclick="setAnsicht(2)">Monate (12M)</span>
+              <span id="fsLabelAnsicht3" onclick="setAnsicht(3)">Jahre</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="myButton">
-      <button onclick="resetZoom()">Reset Zoom</button>
+      <button id="btnResetZoom" onclick="resetZoom()">Reset Zoom</button>
+      <button onclick="toggleFullscreen()" id="btnFullscreen">⛶ Vollbild</button>
+      <span id="currentPeriodLabel" style="font-weight: bold; margin-left: 4px;"></span>
     </div>
+
+    <!-- Obere Bedienleiste: Links Ansicht-Schieberegler, Rechts Verbrauchsvolumen & Kostenrechner -->
+    <div class="top-panels">
+      <!-- Schieberegler für die Ansichten: Tag (0), Monat (1), Monate / 12 Monate (2), Jahre (3) -->
+      <div class="panel-box view-slider-box">
+        <div class="view-slider-header">
+          <label for="ansichtSlider" id="lblAnsichtTitle">Ansicht:</label>
+          <span id="ansichtName">Tag</span>
+        </div>
+        <input type="range" id="ansichtSlider" min="0" max="3" step="1" value="0" oninput="changeAnsicht(this.value)">
+        <div class="view-slider-labels">
+          <span id="labelAnsicht0" class="active-label" onclick="setAnsicht(0)">Tag</span>
+          <span id="labelAnsicht1" onclick="setAnsicht(1)">Monat</span>
+          <span id="labelAnsicht2" onclick="setAnsicht(2)">Monate (12M)</span>
+          <span id="labelAnsicht3" onclick="setAnsicht(3)">Jahre</span>
+        </div>
+      </div>
+
+      <!-- Einstellungen neben der Ansicht: Verbrauchsvolumen & optionale Kostenberechnung -->
+      <div class="panel-box settings-box">
+        <div class="setting-item">
+          <label for="inputVerbrauchsvolumen" id="lblVolumeInput">Verbrauchsvolumen (kWh/Tag):</label>
+          <input type="number" id="inputVerbrauchsvolumen" step="0.5" min="0.1" onchange="onSettingsInputChange()">
+        </div>
+
+        <label class="setting-checkbox">
+          <input type="checkbox" id="checkboxKosten" onchange="onSettingsInputChange()">
+          <span id="lblCalcCosts">Kosten berechnen</span>
+        </label>
+
+        <div class="cost-inputs-wrapper" id="costInputsWrapper">
+          <div class="setting-item">
+            <label for="inputGrundgebuehr" id="lblBaseFee">Grundgebühr (€/Monat):</label>
+            <input type="number" id="inputGrundgebuehr" step="0.1" min="0" onchange="onSettingsInputChange()">
+          </div>
+          <div class="setting-item">
+            <label for="inputKwhPreis" id="lblKwhPrice">kWh-Preis (€/kWh):</label>
+            <input type="number" id="inputKwhPreis" step="0.01" min="0" onchange="onSettingsInputChange()">
+          </div>
+          <label class="setting-checkbox" id="lblShowInChartWrap">
+            <input type="checkbox" id="checkboxKostenChart" onchange="onSettingsInputChange()">
+            <span id="lblShowInChart">Im Diagramm anzeigen</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
     <div class="controls">
-      <button onclick="beforDay()">Zurück</button>
-      <button onclick="nextDay()">Vor</button>
-      <label for="datepicker">Wählen Sie ein Datum aus:</label>
+      <button id="btnBack" onclick="beforDay()">Zurück</button>
+      <button id="btnNext" onclick="nextDay()">Vor</button>
+      <label for="datepicker" id="lblDatepicker">Wählen Sie ein Datum aus:</label>
       <input type="date" id="datepicker" onchange="calculateDateDifference()">
-      <p id="dateDifference"></p>
+      <p id="dateDifference" style="margin: 0;"></p>
     </div>
 
     <div id="Datenvolumen"></div>
     <div id="DatenvolumenMonat"></div>
+    <div id="DatenvolumenJahr"></div>
   </div>
 
   <script>
+    // ========================================================================
+    // KONFIGURATIONSVARIABLEN (Können hier direkt im HTML angepasst werden)
+    // ========================================================================
+    var defaultLanguage = "de";        // Standardsprache: "de" (Deutsch) oder "en" (Englisch)
+    var useJsonCache = false;          // true = JSON-Caching auf dem Server nutzen, false = immer frisch aus DB laden
+    var SetDatenVolumeTotal = 10;      // Standard-Verbrauchsvolumen pro Tag in kWh
+    var calculateCosts = false;        // true = Kostenberechnung standardmäßig aktivieren, false = deaktiviert
+    var showCostsInChart = false;      // true = Kosten standardmäßig auch direkt im Diagramm anzeigen
+    var baseFeePerMonth = 12.50;       // Grundgebühr pro Monat in Euro (€)
+    var pricePerKwh = 0.32;            // Arbeitspreis pro kWh in Euro (€)
+    // ========================================================================
+
+    // Sprachwörterbuch (DE / EN)
+    var translations = {
+      de: {
+        locale: "de-DE",
+        pageTitle: "Stromverbrauchsanzeige",
+        pwdTitle: "Passwort eingeben",
+        pwdPlaceholder: "Passwort",
+        pwdSubmit: "Einloggen",
+        loginFailed: "Fehlgeschlagen.",
+        resetZoom: "Reset Zoom",
+        fullscreen: "⛶ Vollbild",
+        fsControlsBtn: "▲ Steuerung",
+        fsBack: "⬅ Zurück",
+        fsNext: "Vor ➡",
+        fsHide: "▼ Ausblenden",
+        fsExit: "✕ Vollbild beenden",
+        viewTitle: "Ansicht:",
+        viewShort: ["Tag", "Monat", "Monate (12M)", "Jahre"],
+        viewNames: ["Tag", "Monat (Tag 0 - 31)", "Monate (Letzte 12 Monate)", "Jahre"],
+        unitNames: ["Stunde", "Tag", "Monat", "Jahr"],
+        volumeLabel: "Verbrauchsvolumen (kWh/Tag):",
+        calcCosts: "Kosten berechnen",
+        baseFeeLabel: "Grundgebühr (€/Monat):",
+        kwhPriceLabel: "kWh-Preis (€/kWh):",
+        showInChart: "Im Diagramm anzeigen",
+        showInChartTitle: "Zeigt die Kosten als zusätzliche Kurve/Balken direkt im Diagramm an",
+        back: "Zurück",
+        next: "Vor",
+        selectDate: "Wählen Sie ein Datum aus:",
+        axisPower: "Leistung (W)",
+        axisConsumption: "Verbrauch (kWh)",
+        axisCounter: "Zählerstand (kWh)",
+        axisCost: "Kosten (€)",
+        dsPowerDay: "Stromverbrauch (W)",
+        dsCounter: "Zählerstand (kWh)",
+        dsCostDay: "Kosten heute kumuliert (€)",
+        dsConsumptionPer: "Verbrauch pro ",
+        dsCostPer: "Kosten pro ",
+        dayLabelPrefix: "Tag: ",
+        day0Start: "Tag 0 (Start)",
+        startLabelPrefix: "Start",
+        timeDays: " Tagen",
+        timeHours: " Stunden",
+        timeMinutes: " Minuten",
+        dayOverviewTitle: "Tagesübersicht:",
+        volRemaining: "Verbrauchsvolumen übrig: ",
+        of: " von ",
+        usedToday: "Verbrauch heute: ",
+        allUsedIn: "Alles verbraucht in Zeit: ",
+        atPowerOf: " bei einem Verbrauch von ",
+        costDayTitle: "Kosten (Tag):",
+        energyCosts: "Stromkosten (Verbrauch): ",
+        proRataBaseFee: "Anteilige Grundgebühr: ",
+        totalCostsToday: "Gesamtkosten heute: ",
+        currentRate: "Aktuell: ",
+        centPerHourAt: " Cent/Stunde bei ",
+        monthOverviewTitle: "Monatsübersicht",
+        volTotal: "Verbrauchsvolumen: ",
+        volUsed: "Verbrauchsvolumen verbraucht: ",
+        volRemPerDay: "Verbrauchsvolumen übrig pro Tag: ",
+        volUsedPerDay: "Verbrauchsvolumen verbraucht pro Tag: ",
+        volUsedPerDayEst: "Verbrauchsvolumen verbraucht pro Tag (Schätzung): ",
+        costsTitle: "Kosten",
+        energyCostsSoFar: "Arbeitskosten bisher: ",
+        inclProRataBaseFee: "inkl. anteiliger Grundgebühr: ",
+        baseFeeFullMonth: "Grundgebühr voller Monat: ",
+        totalCostsMonthFull: "Gesamtkosten Monat (inkl. voller Grundgebühr): ",
+        estTotalCostsMonthEnd: "Geschätzte Gesamtkosten am Monatsende: ",
+        notEnoughMonthData: "Nicht genügend Monatsdaten verfügbar.",
+        monthViewRange: function (maxDay) { return "Monatsansicht (Tag 0 bis Tag " + maxDay + ")"; },
+        months12ViewTitle: "12-Monats-Ansicht",
+        yearsViewTitle: "Jahresansicht (Alle Jahre)",
+        totalConsPeriod: "Gesamtverbrauch im Zeitraum: ",
+        avgPer: "Durchschnitt pro ",
+        counterStartEnd: "Zählerstand Start (Punkt 0): ",
+        toEnd: "Ende: ",
+        costsInPeriodTitle: "Kosten im Zeitraum:",
+        energyCostsLabel: "Arbeitskosten (Strom): ",
+        baseFeeSimple: "Grundgebühr: ",
+        totalCostsSimple: "Gesamtkosten: ",
+        per: "pro ",
+        yearOverviewTitle: "Jahresübersicht & Prognose",
+        yearConsSoFar: "Verbrauch im Jahr bisher: ",
+        yearDaysMeasured: "Erfasster Zeitraum im Jahr: ",
+        daysWord: " Tage",
+        yearEstTotal: "Geschätzter Jahresverbrauch (365/366 Tage): ",
+        yearAllowanceComparison: "Jahres-Verbrauchsvolumen: ",
+        yearRemainingAllowance: "Übrig: ",
+        yearAvgPerDay: "Durchschnitt pro Tag im Jahr: ",
+        yearEstPerMonth: "Durchschnitt pro Monat (Hochrechnung): ",
+        yearCostsSoFar: "Kosten im Jahr bisher: ",
+        yearEstTotalCosts: "Geschätzte Gesamtkosten am Jahresende: ",
+        yearEstMonthlyInstallment: "Empfohlener monatlicher Abschlag: ",
+        notEnoughYearData: "Nicht genügend Jahresdaten verfügbar."
+      },
+      en: {
+        locale: "en-US",
+        pageTitle: "Power Consumption Monitor",
+        pwdTitle: "Enter Password",
+        pwdPlaceholder: "Password",
+        pwdSubmit: "Login",
+        loginFailed: "Request failed.",
+        resetZoom: "Reset Zoom",
+        fullscreen: "⛶ Fullscreen",
+        fsControlsBtn: "▲ Controls",
+        fsBack: "⬅ Back",
+        fsNext: "Next ➡",
+        fsHide: "▼ Hide",
+        fsExit: "✕ Exit Fullscreen",
+        viewTitle: "View:",
+        viewShort: ["Day", "Month", "Months (12M)", "Years"],
+        viewNames: ["Day", "Month (Day 0 - 31)", "Months (Last 12 Months)", "Years"],
+        unitNames: ["Hour", "Day", "Month", "Year"],
+        volumeLabel: "Daily Allowance (kWh/Day):",
+        calcCosts: "Calculate Costs",
+        baseFeeLabel: "Base Fee (€/Month):",
+        kwhPriceLabel: "kWh Price (€/kWh):",
+        showInChart: "Show in Chart",
+        showInChartTitle: "Displays costs as an additional curve/bar directly inside the chart",
+        back: "Back",
+        next: "Next",
+        selectDate: "Select a date:",
+        axisPower: "Power (W)",
+        axisConsumption: "Consumption (kWh)",
+        axisCounter: "Meter Reading (kWh)",
+        axisCost: "Costs (€)",
+        dsPowerDay: "Power Consumption (W)",
+        dsCounter: "Meter Reading (kWh)",
+        dsCostDay: "Cumulative Costs Today (€)",
+        dsConsumptionPer: "Consumption per ",
+        dsCostPer: "Costs per ",
+        dayLabelPrefix: "Day: ",
+        day0Start: "Day 0 (Start)",
+        startLabelPrefix: "Start",
+        timeDays: " days",
+        timeHours: " hours",
+        timeMinutes: " minutes",
+        dayOverviewTitle: "Daily Overview:",
+        volRemaining: "Allowance remaining: ",
+        of: " of ",
+        usedToday: "Consumption today: ",
+        allUsedIn: "Allowance depleted in: ",
+        atPowerOf: " at a load of ",
+        costDayTitle: "Costs (Day):",
+        energyCosts: "Energy costs (usage): ",
+        proRataBaseFee: "Pro-rata base fee: ",
+        totalCostsToday: "Total costs today: ",
+        currentRate: "Current: ",
+        centPerHourAt: " cents/hour at ",
+        monthOverviewTitle: "Monthly Overview",
+        volTotal: "Monthly allowance: ",
+        volUsed: "Allowance used: ",
+        volRemPerDay: "Allowance remaining per day: ",
+        volUsedPerDay: "Consumption per day: ",
+        volUsedPerDayEst: "Consumption per day (estimate): ",
+        costsTitle: "Costs",
+        energyCostsSoFar: "Energy costs so far: ",
+        inclProRataBaseFee: "incl. pro-rata base fee: ",
+        baseFeeFullMonth: "Full month base fee: ",
+        totalCostsMonthFull: "Total month costs (incl. full base fee): ",
+        estTotalCostsMonthEnd: "Estimated total costs at month end: ",
+        notEnoughMonthData: "Not enough monthly data available.",
+        monthViewRange: function (maxDay) { return "Month View (Day 0 to Day " + maxDay + ")"; },
+        months12ViewTitle: "12-Month View",
+        yearsViewTitle: "Yearly View (All Years)",
+        totalConsPeriod: "Total consumption in period: ",
+        avgPer: "Average per ",
+        counterStartEnd: "Meter reading Start (Point 0): ",
+        toEnd: "End: ",
+        costsInPeriodTitle: "Costs in Period:",
+        energyCostsLabel: "Energy costs: ",
+        baseFeeSimple: "Base fee: ",
+        totalCostsSimple: "Total costs: ",
+        per: "per ",
+        yearOverviewTitle: "Yearly Overview & Forecast",
+        yearConsSoFar: "Consumption in year so far: ",
+        yearDaysMeasured: "Measured period in year: ",
+        daysWord: " days",
+        yearEstTotal: "Estimated annual consumption (365/366 days): ",
+        yearAllowanceComparison: "Annual allowance: ",
+        yearRemainingAllowance: "Remaining: ",
+        yearAvgPerDay: "Average per day in year: ",
+        yearEstPerMonth: "Average per month (projected): ",
+        yearCostsSoFar: "Costs in year so far: ",
+        yearEstTotalCosts: "Estimated total costs at year end: ",
+        yearEstMonthlyInstallment: "Recommended monthly installment: ",
+        notEnoughYearData: "Not enough yearly data available."
+      }
+    };
+
+    var currentLang = defaultLanguage;
     var updateValues = true;
     var updateValuesSek = false;
     var month = 0;
     var monthbefor = 0;
+    var yearSelected = new Date().getFullYear();
+    var yearSelectedBefor = yearSelected;
     var day = 0;
     var daybefor = 0;
-    var ansicht = 0;
+    var ansicht = 0; // 0 = Tag, 1 = Monat (Tag 0..31), 2 = Monate (letzte 12 Monate), 3 = Jahre (alle Jahre)
     var APIaccess = false;
-    var APIpassword = ""
+    var APIpassword = "";
+
+    var lastChartData = null;
+    var lastMonatData = null;
+    var lastJahrData = null;
+    var isFullscreen = false;
+
+    function t(key) {
+      var dict = translations[currentLang] || translations.de;
+      return dict[key] !== undefined ? dict[key] : key;
+    }
+
+    function toggleLanguage() {
+      setLanguage(currentLang === "de" ? "en" : "de");
+    }
+
+    function setLanguage(lang) {
+      if (lang !== "de" && lang !== "en") lang = "de";
+      currentLang = lang;
+      localStorage.setItem("appLanguage", currentLang);
+      applyTranslations();
+    }
+
+    function applyTranslations() {
+      document.getElementById("htmlRoot").setAttribute("lang", currentLang);
+      document.title = t("pageTitle");
+      document.getElementById("pageTitle").innerText = t("pageTitle");
+      document.getElementById("btnLanguage").innerText = currentLang === "de" ? "🌐 DE | EN" : "🌐 EN | DE";
+
+      document.getElementById("pwdTitle").innerText = t("pwdTitle");
+      document.getElementById("passwordInput").placeholder = t("pwdPlaceholder");
+      document.getElementById("passwordSubmit").innerText = t("pwdSubmit");
+
+      document.getElementById("btnResetZoom").innerText = t("resetZoom");
+      document.getElementById("btnFullscreen").innerText = t("fullscreen");
+      document.getElementById("fsOverlayToggle").innerText = t("fsControlsBtn");
+      document.getElementById("fsBtnBack").innerText = t("fsBack");
+      document.getElementById("fsBtnNext").innerText = t("fsNext");
+      document.getElementById("fsBtnResetZoom").innerText = t("resetZoom");
+      document.getElementById("fsBtnHide").innerText = t("fsHide");
+      document.getElementById("fsBtnExit").innerText = t("fsExit");
+      document.getElementById("fsViewPrefix").innerText = t("viewTitle");
+
+      document.getElementById("lblAnsichtTitle").innerText = t("viewTitle");
+      var viewNamesArr = t("viewNames");
+      var viewShortArr = t("viewShort");
+      document.getElementById("ansichtName").innerText = viewNamesArr[ansicht];
+      document.getElementById("fsAnsichtName").innerText = viewNamesArr[ansicht];
+
+      for (var i = 0; i <= 3; i++) {
+        document.getElementById("labelAnsicht" + i).innerText = viewShortArr[i];
+        document.getElementById("fsLabelAnsicht" + i).innerText = viewShortArr[i];
+      }
+
+      document.getElementById("lblVolumeInput").innerText = t("volumeLabel");
+      document.getElementById("lblCalcCosts").innerText = t("calcCosts");
+      document.getElementById("lblBaseFee").innerText = t("baseFeeLabel");
+      document.getElementById("lblKwhPrice").innerText = t("kwhPriceLabel");
+      document.getElementById("lblShowInChart").innerText = t("showInChart");
+      document.getElementById("lblShowInChartWrap").title = t("showInChartTitle");
+
+      document.getElementById("btnBack").innerText = t("back");
+      document.getElementById("btnNext").innerText = t("next");
+      document.getElementById("lblDatepicker").innerText = t("selectDate");
+
+      if (window.myChart) {
+        myChart.options.scales.B.title.text = t("axisCounter");
+        myChart.options.scales.C.title.text = t("axisCost");
+        if (ansicht === 0) {
+          myChart.options.scales.A.title.text = t("axisPower");
+        } else {
+          myChart.options.scales.A.title.text = t("axisConsumption");
+        }
+      }
+
+      if (lastMonatData) {
+        renderDataMonat(lastMonatData);
+      }
+      if (lastJahrData) {
+        renderDataJahr(lastJahrData);
+      }
+      if (lastChartData) {
+        renderChartAndStats(lastChartData);
+      }
+    }
+
+    // Initialisiere die UI-Eingabefelder mit den Standardvariablen (oder gespeicherten Werten)
+    function initSettingsUI() {
+      var savedLang = localStorage.getItem("appLanguage");
+      if (savedLang === "de" || savedLang === "en") {
+        currentLang = savedLang;
+      } else {
+        currentLang = defaultLanguage;
+      }
+
+      if (localStorage.getItem('SetDatenVolumeTotal') !== null) {
+        SetDatenVolumeTotal = parseFloat(localStorage.getItem('SetDatenVolumeTotal')) || SetDatenVolumeTotal;
+      }
+      if (localStorage.getItem('calculateCosts') !== null) {
+        calculateCosts = localStorage.getItem('calculateCosts') === 'true';
+      }
+      if (localStorage.getItem('showCostsInChart') !== null) {
+        showCostsInChart = localStorage.getItem('showCostsInChart') === 'true';
+      }
+      if (localStorage.getItem('baseFeePerMonth') !== null) {
+        baseFeePerMonth = parseFloat(localStorage.getItem('baseFeePerMonth'));
+      }
+      if (localStorage.getItem('pricePerKwh') !== null) {
+        pricePerKwh = parseFloat(localStorage.getItem('pricePerKwh'));
+      }
+
+      document.getElementById('inputVerbrauchsvolumen').value = SetDatenVolumeTotal;
+      document.getElementById('checkboxKosten').checked = calculateCosts;
+      document.getElementById('checkboxKostenChart').checked = showCostsInChart;
+      document.getElementById('inputGrundgebuehr').value = baseFeePerMonth;
+      document.getElementById('inputKwhPreis').value = pricePerKwh;
+      document.getElementById('costInputsWrapper').style.display = calculateCosts ? 'flex' : 'none';
+    }
+
+    function onSettingsInputChange() {
+      var volVal = parseFloat(document.getElementById('inputVerbrauchsvolumen').value);
+      if (!isNaN(volVal) && volVal > 0) {
+        SetDatenVolumeTotal = volVal;
+        localStorage.setItem('SetDatenVolumeTotal', SetDatenVolumeTotal);
+      }
+
+      calculateCosts = document.getElementById('checkboxKosten').checked;
+      localStorage.setItem('calculateCosts', calculateCosts);
+      document.getElementById('costInputsWrapper').style.display = calculateCosts ? 'flex' : 'none';
+
+      showCostsInChart = document.getElementById('checkboxKostenChart').checked;
+      localStorage.setItem('showCostsInChart', showCostsInChart);
+
+      var feeVal = parseFloat(document.getElementById('inputGrundgebuehr').value);
+      if (!isNaN(feeVal) && feeVal >= 0) {
+        baseFeePerMonth = feeVal;
+        localStorage.setItem('baseFeePerMonth', baseFeePerMonth);
+      }
+
+      var kwhVal = parseFloat(document.getElementById('inputKwhPreis').value);
+      if (!isNaN(kwhVal) && kwhVal >= 0) {
+        pricePerKwh = kwhVal;
+        localStorage.setItem('pricePerKwh', pricePerKwh);
+      }
+
+      // Anzeige direkt mit den neuen Werten aktualisieren
+      if (lastMonatData) {
+        renderDataMonat(lastMonatData);
+      }
+      if (lastJahrData) {
+        renderDataJahr(lastJahrData);
+      }
+      if (lastChartData) {
+        renderChartAndStats(lastChartData);
+      }
+    }
+
+    initSettingsUI();
+
+    // ========================================================================
+    // VOLLBILD-MODUS & GESTENSTEUERUNG (Hochwischen / Knopf)
+    // ========================================================================
+    function toggleFullscreen() {
+      var container = document.getElementById('chartContainer');
+      isFullscreen = !isFullscreen;
+
+      if (isFullscreen) {
+        container.classList.add('fullscreen-mode');
+        toggleFsDrawer(false);
+        if (container.requestFullscreen) {
+          container.requestFullscreen().catch(function () {});
+        } else if (container.webkitRequestFullscreen) {
+          container.webkitRequestFullscreen();
+        }
+      } else {
+        container.classList.remove('fullscreen-mode');
+        toggleFsDrawer(false);
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(function () {});
+        } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+
+      setTimeout(function () {
+        myChart.resize();
+        myChart.update('none');
+      }, 100);
+    }
+
+    document.addEventListener('fullscreenchange', function () {
+      var container = document.getElementById('chartContainer');
+      if (!document.fullscreenElement && isFullscreen) {
+        isFullscreen = false;
+        container.classList.remove('fullscreen-mode');
+        toggleFsDrawer(false);
+        setTimeout(function () {
+          myChart.resize();
+          myChart.update('none');
+        }, 100);
+      }
+    });
+
+    function toggleFsDrawer(openState) {
+      var drawer = document.getElementById('fsControlsDrawer');
+      var toggleBtn = document.getElementById('fsOverlayToggle');
+      if (openState) {
+        drawer.classList.add('open');
+        toggleBtn.classList.add('hidden-toggle');
+      } else {
+        drawer.classList.remove('open');
+        toggleBtn.classList.remove('hidden-toggle');
+      }
+    }
+
+    function syncDatepickerFromFs(val) {
+      document.getElementById('datepicker').value = val;
+      calculateDateDifference();
+    }
+
+    // Wischgeste (Swipe-Up vom unteren Bereich öffnet die Steuerung im Vollbild, Swipe-Down auf der Steuerung schließt sie)
+    var touchStartY = null;
+    var chartContainerEl = document.getElementById('chartContainer');
+    chartContainerEl.addEventListener('touchstart', function (e) {
+      if (!isFullscreen || e.touches.length !== 1) return;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    chartContainerEl.addEventListener('touchend', function (e) {
+      if (!isFullscreen || touchStartY === null || e.changedTouches.length !== 1) return;
+      var touchEndY = e.changedTouches[0].clientY;
+      var deltaY = touchStartY - touchEndY;
+      var screenH = window.innerHeight;
+
+      // Hochwischen im unteren Drittel des Bildschirms öffnet das Overlay
+      if (deltaY > 45 && touchStartY > screenH * 0.65) {
+        toggleFsDrawer(true);
+      } else if (deltaY < -45) {
+        // Runterwischen blendet das Overlay wieder aus
+        toggleFsDrawer(false);
+      }
+      touchStartY = null;
+    }, { passive: true });
+
+    function setAnsicht(val) {
+      document.getElementById('ansichtSlider').value = val;
+      document.getElementById('fsAnsichtSlider').value = val;
+      changeAnsicht(val);
+    }
+
+    function changeAnsicht(val) {
+      ansicht = parseInt(val, 10);
+      var viewNamesArr = t("viewNames");
+      document.getElementById('ansichtSlider').value = ansicht;
+      document.getElementById('fsAnsichtSlider').value = ansicht;
+      document.getElementById('ansichtName').innerText = viewNamesArr[ansicht];
+      document.getElementById('fsAnsichtName').innerText = viewNamesArr[ansicht];
+      for (var i = 0; i <= 3; i++) {
+        var lbl = document.getElementById('labelAnsicht' + i);
+        if (lbl) {
+          lbl.className = (i === ansicht) ? 'active-label' : '';
+        }
+      }
+      updateValues = true;
+      updateValuesCheckBefor();
+      getDataAndUpdateChart();
+      updateValuesCheck();
+    }
 
     function updateValuesCheck() {
-      if (day > 0) {
+      if (day > 0 || month > 0 || ansicht !== 0) {
         updateValues = false;
       } else {
         updateValues = true;
@@ -68,122 +1014,191 @@
     function updateValuesCheckBefor() {
       monthbefor = month;
       month = monthsAgo(day);
+      yearSelectedBefor = yearSelected;
+      yearSelected = yearFromMonthOffset(month);
+    }
+
+    function yearFromMonthOffset(monthsBack) {
+      var today = new Date();
+      var target = new Date(today.getFullYear(), today.getMonth() - monthsBack, 1);
+      return target.getFullYear();
+    }
+
+    function setDayFromMonthOffset(targetMonthsAgo) {
+      var today = new Date();
+      var target = new Date(today.getFullYear(), today.getMonth() - targetMonthsAgo, 1);
+      var diffMs = today.getTime() - target.getTime();
+      day = Math.max(0, Math.floor(diffMs / (1000 * 3600 * 24)));
     }
 
     function nextDay() {
-      if (day != 0) {
-        daybefor = day;
-        day--
+      if (ansicht === 0) {
+        if (day > 0) {
+          daybefor = day;
+          day--;
+          updateValues = true;
+          updateValuesCheckBefor();
+          getDataAndUpdateChart();
+          updateValuesCheck();
+        }
+      } else if (ansicht === 1 || ansicht === 2) {
+        if (month > 0) {
+          monthbefor = month;
+          daybefor = day;
+          yearSelectedBefor = yearSelected;
+          month--;
+          setDayFromMonthOffset(month);
+          yearSelected = yearFromMonthOffset(month);
+          updateValues = true;
+          getDataMonat();
+          if (yearSelected !== yearSelectedBefor) {
+            getDataJahr();
+          }
+          getDataAndUpdateChart();
+          updateValuesCheck();
+        }
+      } else if (ansicht === 3) {
         updateValues = true;
-        updateValuesCheckBefor();
         getDataAndUpdateChart();
         updateValuesCheck();
       }
     }
 
     function beforDay() {
-      daybefor = day;
-      day++
-      updateValues = true;
-      updateValuesCheckBefor();
-      getDataAndUpdateChart();
-      updateValuesCheck();
+      if (ansicht === 0) {
+        daybefor = day;
+        day++;
+        updateValues = true;
+        updateValuesCheckBefor();
+        getDataAndUpdateChart();
+        updateValuesCheck();
+      } else if (ansicht === 1 || ansicht === 2) {
+        monthbefor = month;
+        daybefor = day;
+        yearSelectedBefor = yearSelected;
+        month++;
+        setDayFromMonthOffset(month);
+        yearSelected = yearFromMonthOffset(month);
+        updateValues = true;
+        getDataMonat();
+        if (yearSelected !== yearSelectedBefor) {
+          getDataJahr();
+        }
+        getDataAndUpdateChart();
+        updateValuesCheck();
+      } else if (ansicht === 3) {
+        updateValues = true;
+        getDataAndUpdateChart();
+        updateValuesCheck();
+      }
     }
 
     function monthsAgo(daysBack) {
-      // Heutiges Datum
       var today = new Date();
-
-      // Datum berechnen, das eine bestimmte Anzahl von Tagen zurückliegt
       var pastDate = new Date(today);
       pastDate.setDate(today.getDate() - daysBack);
 
-      // Differenz in Jahren und Monaten ermitteln
       var years = today.getFullYear() - pastDate.getFullYear();
       var months = today.getMonth() - pastDate.getMonth();
-
-      // Gesamte Anzahl der Monate berechnen
       var totalMonths = years * 12 + months;
 
-      return totalMonths;
+      return Math.max(0, totalMonths);
     }
 
     function calculateDateDifference() {
-      var selectedDate = new Date(document.getElementById('datepicker').value);
+      var val = document.getElementById('datepicker').value;
+      if (!val) return;
+      document.getElementById('fsDatepicker').value = val;
+
+      var selectedDate = new Date(val + 'T00:00:00');
       var currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
 
-      // Differenz in Millisekunden berechnen
-      var timeDifference = selectedDate.getTime() - currentDate.getTime();
+      var timeDifference = currentDate.getTime() - selectedDate.getTime();
+      var dayDifference = Math.max(0, Math.round(timeDifference / (1000 * 3600 * 24)));
 
-      // Differenz in Tagen berechnen
-      var dayDifference = Math.abs(Math.floor(timeDifference / (1000 * 3600 * 24))) - 1;
-
-      // Ergebnis aktualisieren
-      //document.getElementById('dateDifference').innerText = 'Differenz zum heutigen Tag: ' + dayDifference + ' Tage.';
       daybefor = day;
       day = dayDifference;
       updateValues = true;
       updateValuesCheckBefor();
+      if (month != monthbefor) {
+        getDataMonat();
+      }
+      if (yearSelected != yearSelectedBefor) {
+        getDataJahr();
+      }
       getDataAndUpdateChart();
       updateValuesCheck();
     }
 
+    function isMobileScreen() {
+      return window.innerWidth <= 640;
+    }
+
     var ctx = document.getElementById('myChart').getContext('2d');
-    //   var width = window.innerWidth * 0.60;
-    //   //var height = window.innerHeight * 0.50;
-    //   var height = window.innerHeight * 0.70;
-    //   ctx.canvas.width  = width;
-    //   ctx.canvas.height = height;
-    // //  ctx.translate(width,height); // now 0,0 is the center of the canvas.
-    //   ctx.translate(width/2,height/2); // now 0,0 is the center of the canvas.
     var nbPoints = 4320;
     var samplesPoints = nbPoints / 10;
     var thresholdsPoints = nbPoints - (nbPoints / 10);
-    //var samplesPoints = 100;
-    //var thresholdsPoints = 900;
     var dates = [];
     var powerConsumptions = [];
     var counterReadings = [];
-    myChart = new Chart(ctx, {
+
+    var myChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: dates,
-
         datasets: [{
-          label: 'Stromverbrauch (Wh)',
+          label: t('dsPowerDay'),
           data: powerConsumptions,
           yAxisID: 'A',
-          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          backgroundColor: 'rgba(255, 99, 132, 0.25)',
           borderColor: 'rgba(255, 99, 132, 1)',
-          borderWidth: 1,
-          maxTicksLimit: 2
+          borderWidth: 1.5,
+          pointRadius: isMobileScreen() ? 1.5 : 3
         }, {
-          //   label: 'Stromverbrauch (Wh)',
-          //   data: powerConsumptionsNew,
-          //   yAxisID: 'A',
-          //   backgroundColor: 'rgba(0, 255, 132, 0.2)',
-          //   borderColor: 'rgba(0, 255, 0, 1)',
-          //   borderWidth: 1,
-          //   maxTicksLimit: 2
-          // }, {
-          label: 'Zählerstand (kWh)',
+          label: t('dsCounter'),
           data: counterReadings,
           yAxisID: 'B',
           backgroundColor: 'rgba(54, 162, 235, 0.2)',
           borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 1,
-          maxTicksLimit: 2
-          // }, {
-          //   label: '# of Votes',
-          //   data: dataArr
+          borderWidth: 1.5,
+          pointRadius: isMobileScreen() ? 1.5 : 3
+        }, {
+          label: t('axisCost'),
+          data: [],
+          yAxisID: 'C',
+          hidden: true,
+          backgroundColor: 'rgba(75, 192, 192, 0.25)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1.5,
+          pointRadius: isMobileScreen() ? 1.5 : 3
         }]
       },
       options: {
-        //parsing: false,
         normalized: true,
         animation: false,
-        responsive: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
         plugins: {
+          legend: {
+            labels: {
+              filter: function (item) {
+                // Kosten-Dataset in der Legende ausblenden, wenn es nicht aktiv ist
+                if (item.datasetIndex === 2 && !(calculateCosts && showCostsInChart)) {
+                  return false;
+                }
+                return true;
+              },
+              boxWidth: isMobileScreen() ? 20 : 40,
+              font: {
+                size: isMobileScreen() ? 11 : 12
+              }
+            }
+          },
           decimation: {
             enabled: true,
             samples: samplesPoints,
@@ -212,403 +1227,539 @@
             },
           }
         },
-        // scales: {
-        //   yAxes: [{
-        //     id: 'A',
-        //     type: 'linear',
-        //     position: 'left',
-        //     ticks: {
-        //       //maxTicksLimit: 10,
-        //       autoSkip: true,
-        //       beginAtZero: false
-        //     }
-        //   }, {
-        //     id: 'B',
-        //     type: 'linear',
-        //     position: 'right',
-        //     ticks: {
-        //       //maxTicksLimit: 10,
-        //       autoSkip: true,
-        //       beginAtZero: false
-        //     }
-        //   }]
-        // }
+        scales: {
+          x: {
+            ticks: {
+              autoSkip: true,
+              maxTicksLimit: isMobileScreen() ? 6 : 16,
+              maxRotation: isMobileScreen() ? 45 : 50,
+              font: {
+                size: isMobileScreen() ? 10 : 12
+              }
+            }
+          },
+          A: {
+            type: 'linear',
+            position: 'left',
+            beginAtZero: true,
+            ticks: {
+              font: {
+                size: isMobileScreen() ? 10 : 12
+              }
+            },
+            title: {
+              display: !isMobileScreen(),
+              text: t('axisPower')
+            }
+          },
+          B: {
+            type: 'linear',
+            position: 'right',
+            beginAtZero: false,
+            grid: {
+              drawOnChartArea: false
+            },
+            ticks: {
+              font: {
+                size: isMobileScreen() ? 10 : 12
+              }
+            },
+            title: {
+              display: !isMobileScreen(),
+              text: t('axisCounter')
+            }
+          },
+          C: {
+            type: 'linear',
+            position: 'right',
+            display: false,
+            beginAtZero: true,
+            grid: {
+              drawOnChartArea: false
+            },
+            ticks: {
+              font: {
+                size: isMobileScreen() ? 10 : 12
+              },
+              callback: function (value) {
+                return value.toFixed(2) + ' €';
+              }
+            },
+            title: {
+              display: !isMobileScreen(),
+              text: t('axisCost')
+            }
+          }
+        }
       }
     });
 
-    var SetDatenVolumeTotal = 10;
+    applyTranslations();
+
+    window.addEventListener('resize', function () {
+      var mobile = isMobileScreen();
+      myChart.options.scales.x.ticks.maxTicksLimit = mobile ? 6 : 16;
+      myChart.options.scales.A.title.display = !mobile;
+      myChart.options.scales.B.title.display = !mobile;
+      myChart.options.scales.C.title.display = !mobile;
+      myChart.update('none');
+    });
+
+    function renderDataMonat(data) {
+      var DatenVolumeTotal = SetDatenVolumeTotal;
+
+      if (data && data.length >= 2) {
+        var counterReadingFirst = Number(data[0].counter_reading);
+        var counterReadingLast = Number(data[1].counter_reading);
+        var unterschiedVerbrauch = Math.max(0, (counterReadingLast - counterReadingFirst) / 10000);
+
+        var firstDate = new Date(data[0].date + 'T' + data[0].time + 'Z');
+        var lasttDate = new Date(data[1].date + 'T' + data[1].time + 'Z');
+        var firstUtcDate = firstDate.getDate() - 1;
+
+        var totalDaysInCalendarMonth = new Date(lasttDate.getFullYear(), lasttDate.getMonth() + 1, 0).getDate();
+        var daysInMonth = totalDaysInCalendarMonth - firstUtcDate;
+
+        var verbrauchsvolumenGesamt = (DatenVolumeTotal * daysInMonth).toFixed(4);
+        var verbrauchsvolumenUebrig = ((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch).toFixed(4);
+        var verbrauchsvolumenVerbraucht = unterschiedVerbrauch.toFixed(4);
+
+        var remainingDays = Math.max(1, (daysInMonth + 1) - (lasttDate.getDate() - firstUtcDate));
+        var verbrauchsvolumenUebrigProTag = (((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch) / remainingDays).toFixed(4);
+
+        var daysPassed = Math.max(1, lasttDate.getDate() - firstUtcDate);
+        var timeFraction = (lasttDate.getHours() / 24) + (lasttDate.getMinutes() / 1440) + (lasttDate.getSeconds() / 86400);
+        var verbrauchsvolumenVerbrauchtProTag = (unterschiedVerbrauch / daysPassed).toFixed(4);
+        var exactDays = Math.max(0.01, daysPassed + timeFraction - 1);
+        var verbrauchsvolumenVerbrauchtProTagSchätzung = (unterschiedVerbrauch / exactDays).toFixed(4);
+
+        var monthLabel = lasttDate.toLocaleDateString(t('locale'), { month: 'long', year: 'numeric' });
+        var verbrauchsvolumenText = '<strong>' + t('monthOverviewTitle') + ' (' + monthLabel + '):</strong><br>' +
+          t('volTotal') + verbrauchsvolumenGesamt + ' kWh <br>' +
+          t('volRemaining') + verbrauchsvolumenUebrig + ' kWh <br>' +
+          t('volUsed') + verbrauchsvolumenVerbraucht + ' kWh <br>' +
+          t('volRemPerDay') + verbrauchsvolumenUebrigProTag + ' kWh <br>' +
+          t('volUsedPerDay') + verbrauchsvolumenVerbrauchtProTag + ' kWh <br>' +
+          t('volUsedPerDayEst') + verbrauchsvolumenVerbrauchtProTagSchätzung + ' kWh';
+
+        if (calculateCosts) {
+          var kostenVerbrauchMonat = unterschiedVerbrauch * pricePerKwh;
+          var kostenGesamtBisher = kostenVerbrauchMonat + (baseFeePerMonth * (daysPassed / totalDaysInCalendarMonth));
+          var hochgerechneterMonatsverbrauch = parseFloat(verbrauchsvolumenVerbrauchtProTagSchätzung) * totalDaysInCalendarMonth;
+          var kostenMonatPrognose = (hochgerechneterMonatsverbrauch * pricePerKwh) + baseFeePerMonth;
+
+          verbrauchsvolumenText += '<br><strong>' + t('costsTitle') + ' (' + monthLabel + '):</strong><br>' +
+            t('energyCostsSoFar') + kostenVerbrauchMonat.toFixed(2) + ' € (' + t('inclProRataBaseFee') + kostenGesamtBisher.toFixed(2) + ' €)<br>' +
+            t('baseFeeFullMonth') + baseFeePerMonth.toFixed(2) + ' € | ' + t('totalCostsMonthFull') + (kostenVerbrauchMonat + baseFeePerMonth).toFixed(2) + ' €<br>' +
+            t('estTotalCostsMonthEnd') + kostenMonatPrognose.toFixed(2) + ' €';
+        }
+
+        document.getElementById('DatenvolumenMonat').innerHTML = verbrauchsvolumenText;
+      } else {
+        document.getElementById('DatenvolumenMonat').innerHTML = t('notEnoughMonthData');
+      }
+    }
 
     function getDataMonat() {
-      DatenVolumeTotal = SetDatenVolumeTotal;
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
           var data = JSON.parse(this.responseText);
-
-          if (data.length >= 2) {
-            var counterReadingFirst = data[0].counter_reading;
-            var counterReadingLast = data[1].counter_reading;
-            var unterschiedVerbrauch = (counterReadingLast - counterReadingFirst) / 10000;
-
-            var firstDate = new Date(data[0].date + 'T' + data[0].time + 'Z');
-            var lasttDate = new Date(data[1].date + 'T' + data[1].time + 'Z');
-            var firstUtcDate = firstDate.getDate() - 1;
-
-            var today = new Date();
-            var year = today.getFullYear();
-            //var month = today.getMonth() + 1; // Monate sind nullbasiert, daher +1
-            var daysInMonth = new Date(year, month, 0).getDate() - firstUtcDate;
-
-            var verbrauchsvolumenGesamt = (DatenVolumeTotal * daysInMonth).toFixed(4);
-            var verbrauchsvolumenUebrig = ((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch).toFixed(4);
-            var verbrauchsvolumenVerbraucht = unterschiedVerbrauch.toFixed(4);
-
-            var verbrauchsvolumenUebrigProTag = (((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch) / ((daysInMonth + 1) - (lasttDate.getDate() - firstUtcDate))).toFixed(4);
-            //var verbrauchsvolumenUebrigProTag = (((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch) / ((daysInMonth + 1) - (today.getDate() - firstUtcDate))).toFixed(4);
-
-            var daysPassed = lasttDate.getDate() - firstUtcDate;
-            var timeFraction = (lasttDate.getHours() / 24) + (lasttDate.getMinutes() / 1440) + (lasttDate.getSeconds() / 86400);
-            //var daysPassed = today.getDate() - firstUtcDate;
-            //var timeFraction = (today.getHours() / 24) + (today.getMinutes() / 1440) + (today.getSeconds() / 86400);
-            var verbrauchsvolumenVerbrauchtProTag = (unterschiedVerbrauch / (daysPassed)).toFixed(4);
-            var verbrauchsvolumenVerbrauchtProTagSchätzung = (unterschiedVerbrauch / (daysPassed + timeFraction - 1)).toFixed(4);
-
-
-            var verbrauchsvolumenText = 'Diesen Monat: <br>' +
-              'Verbrauchsvolumen: ' + verbrauchsvolumenGesamt + ' kWh <br>' +
-              'Verbrauchsvolumen übrig: ' + verbrauchsvolumenUebrig + ' kWh <br>' +
-              'Verbrauchsvolumen verbraucht: ' + verbrauchsvolumenVerbraucht + ' kWh <br>' +
-              'Verbrauchsvolumen übrig pro Tag: ' + verbrauchsvolumenUebrigProTag + ' kWh <br>' +
-              'Verbrauchsvolumen verbraucht pro Tag: ' + verbrauchsvolumenVerbrauchtProTag + ' kWh  <br>' +
-              'Verbrauchsvolumen verbraucht pro Tag (Schätzung): ' + verbrauchsvolumenVerbrauchtProTagSchätzung + ' kWh';
-
-            document.getElementById('DatenvolumenMonat').innerHTML = verbrauchsvolumenText;
-
-            // document.getElementById('DatenvolumenMonat').innerHTML = 'Diesen Monat: <br>Verbrauchsvolumen: ' + (DatenVolumeTotal * daysInMonth).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen übrig: ' + ((DatenVolumeTotal * daysInMonth) -
-            //   unterschiedVerbrauch).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen verbraucht: ' + unterschiedVerbrauch.toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen übrig pro Tag: ' + (((DatenVolumeTotal * daysInMonth) - unterschiedVerbrauch) /
-            //   ((daysInMonth + 1) - (today.getDate() - firstUtcDate))).toFixed(4) + ' kWh <br>' + 'Verbrauchsvolumen verbraucht pro Tag: ' + (unterschiedVerbrauch / (((today.getDate() - firstUtcDate) + (today.getHours() / 24) + (today.getMinutes() /
-            //   1440) + (today
-            //   .getSeconds() / 86400)) - 1)).toFixed(4) + ' kWh';
-          } else {
-            document.getElementById('DatenvolumenMonat').innerHTML = 'Nicht genügend Daten verfügbar.';
-          }
+          lastMonatData = data;
+          renderDataMonat(data);
         }
       };
 
-      xhttp.open("GET", "./get_data.php?months=" + month + "&password=" + APIpassword, true);
+      var cacheParam = "&cache=" + (useJsonCache ? "true" : "false");
+      xhttp.open("GET", "./get_data.php?months=" + month + cacheParam + "&password=" + encodeURIComponent(APIpassword), true);
       xhttp.send();
+    }
+
+    function isLeapYear(yr) {
+      return ((yr % 4 === 0) && (yr % 100 !== 0)) || (yr % 400 === 0);
+    }
+
+    function renderDataJahr(data) {
+      var DatenVolumeTotal = SetDatenVolumeTotal;
+
+      if (data && data.length >= 2) {
+        var counterReadingFirst = Number(data[0].counter_reading);
+        var counterReadingLast = Number(data[1].counter_reading);
+        var verbrauchJahrBisher = Math.max(0, (counterReadingLast - counterReadingFirst) / 10000);
+
+        var firstDate = new Date(data[0].date + 'T' + data[0].time + 'Z');
+        var lastDate = new Date(data[1].date + 'T' + data[1].time + 'Z');
+        var yr = data[0].year || lastDate.getFullYear();
+        var totalDaysInYear = isLeapYear(yr) ? 366 : 365;
+
+        // Exakte Anzahl der gemessenen Tage zwischen erstem und letztem Messpunkt im Jahr
+        var diffMs = Math.max(3600 * 1000, lastDate.getTime() - firstDate.getTime());
+        var elapsedDaysMeasured = diffMs / (1000 * 3600 * 24);
+
+        // Start-Tag im Jahr berücksichtigen (falls der Zähler erst mitten im Jahr installiert wurde)
+        var startOfYearDate = new Date(Date.UTC(yr, 0, 1, 0, 0, 0));
+        var offsetDaysFromJan1 = Math.max(0, Math.floor((firstDate.getTime() - startOfYearDate.getTime()) / (1000 * 3600 * 24)));
+        var activeDaysInYear = Math.max(1, totalDaysInYear - offsetDaysFromJan1);
+
+        var avgPerDayYear = verbrauchJahrBisher / Math.max(0.1, elapsedDaysMeasured);
+        var hochgerechneterJahresverbrauchFull = avgPerDayYear * totalDaysInYear;
+        var hochgerechneterMonatsSchnitt = hochgerechneterJahresverbrauchFull / 12;
+
+        var jahresVolumenGesamt = DatenVolumeTotal * activeDaysInYear;
+        var jahresVolumenUebrig = jahresVolumenGesamt - verbrauchJahrBisher;
+
+        var progressPercent = Math.min(100, Math.max(1, (elapsedDaysMeasured / activeDaysInYear) * 100)).toFixed(1);
+
+        var jahrText =
+          '<strong>' + t('yearOverviewTitle') + ' (' + yr + '):</strong><br>' +
+          '<div class="year-progress-wrap" title="' + progressPercent + '%"><div class="year-progress-bar" style="width:' + progressPercent + '%;"></div></div>' +
+          t('yearDaysMeasured') + elapsedDaysMeasured.toFixed(1) + ' / ' + activeDaysInYear + t('daysWord') + ' (' + progressPercent + ' %)<br>' +
+          t('yearConsSoFar') + '<strong>' + verbrauchJahrBisher.toFixed(2) + ' kWh</strong> (' + t('yearAvgPerDay') + avgPerDayYear.toFixed(2) + ' kWh)<br>' +
+          t('yearEstTotal') + '<strong>' + hochgerechneterJahresverbrauchFull.toFixed(2) + ' kWh</strong> (' + t('yearEstPerMonth') + hochgerechneterMonatsSchnitt.toFixed(2) + ' kWh)<br>' +
+          t('yearAllowanceComparison') + jahresVolumenGesamt.toFixed(2) + ' kWh (' + t('yearRemainingAllowance') + jahresVolumenUebrig.toFixed(2) + ' kWh)';
+
+        if (calculateCosts) {
+          var arbeitskostenBisher = verbrauchJahrBisher * pricePerKwh;
+          var anteiligeGrundgebuehrBisher = (baseFeePerMonth * 12) * (elapsedDaysMeasured / totalDaysInYear);
+          var gesamtkostenBisher = arbeitskostenBisher + anteiligeGrundgebuehrBisher;
+
+          var jahresGrundgebuehrFull = baseFeePerMonth * 12;
+          var jahresArbeitskostenPrognose = hochgerechneterJahresverbrauchFull * pricePerKwh;
+          var jahresGesamtkostenPrognose = jahresArbeitskostenPrognose + jahresGrundgebuehrFull;
+          var empfohlenerAbschlagMonat = jahresGesamtkostenPrognose / 12;
+
+          jahrText += '<br><strong>' + t('costsTitle') + ' (' + yr + '):</strong><br>' +
+            t('yearCostsSoFar') + gesamtkostenBisher.toFixed(2) + ' € (' + t('energyCostsLabel') + arbeitskostenBisher.toFixed(2) + ' € + ' + t('proRataBaseFee') + anteiligeGrundgebuehrBisher.toFixed(2) + ' €)<br>' +
+            t('yearEstTotalCosts') + '<strong>' + jahresGesamtkostenPrognose.toFixed(2) + ' €</strong> (' + t('energyCostsLabel') + jahresArbeitskostenPrognose.toFixed(2) + ' € + ' + t('baseFeeSimple') + jahresGrundgebuehrFull.toFixed(2) + ' €)<br>' +
+            t('yearEstMonthlyInstallment') + '<strong>' + empfohlenerAbschlagMonat.toFixed(2) + ' € / ' + t('unitNames')[2] + '</strong>';
+        }
+
+        document.getElementById('DatenvolumenJahr').innerHTML = jahrText;
+      } else {
+        document.getElementById('DatenvolumenJahr').innerHTML = t('notEnoughYearData');
+      }
+    }
+
+    function getDataJahr() {
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          var data = JSON.parse(this.responseText);
+          lastJahrData = data;
+          renderDataJahr(data);
+        }
+      };
+
+      var cacheParam = "&cache=" + (useJsonCache ? "true" : "false");
+      xhttp.open("GET", "./get_data.php?year_summary=" + yearSelected + cacheParam + "&password=" + encodeURIComponent(APIpassword), true);
+      xhttp.send();
+    }
+
+    function renderChartAndStats(data) {
+      var mobile = isMobileScreen();
+      var showCostCurve = calculateCosts && showCostsInChart;
+
+      // ==================================================================
+      // ANSICHT 0: TAGESANSICHT (Detailverlauf von 00:00 bis 24:00 Uhr)
+      // ==================================================================
+      if (ansicht === 0) {
+        var dates = [];
+        var powerConsumptions = [];
+        var powerConsumptionsNew = [];
+        var powerConsumptionsNewNew = [];
+        var counterReadings = [];
+        var costPoints = [];
+
+        var firstDateObj = new Date(data[0].date + 'T' + data[0].time + 'Z');
+        var daysInThisMonth = new Date(firstDateObj.getFullYear(), firstDateObj.getMonth() + 1, 0).getDate();
+        var startCounterDayKwh = Number(data[0].counter_reading) / 10000;
+
+        var Auflösung = 1;
+        for (var i = 0; i < data.length; i++) {
+          var latestutcDate = new Date(data[i].date + 'T' + data[i].time + 'Z');
+
+          if (i != 0 && i != Auflösung) {
+            var latestbeforutcDate = new Date(data[i - Auflösung].date + 'T' + data[i - Auflösung].time + 'Z');
+            var unterschiedVerbrauch = Number(data[i].counter_reading) - Number(data[i - Auflösung].counter_reading);
+            var power_consumptionNew;
+            if (((latestutcDate - latestbeforutcDate) / 1000) <= 3600) { // Bei mehr als 1 Stunde ohne Daten wird keine Leistung hochgerechnet.
+              power_consumptionNew = (unterschiedVerbrauch) * (60 / ((latestutcDate - latestbeforutcDate) / (100))) * 60;
+            } else {
+              power_consumptionNew = Math.ceil(unterschiedVerbrauch);
+            }
+            powerConsumptionsNew.push(power_consumptionNew);
+          } else {
+            if (data.length > 1) {
+              powerConsumptionsNew.push(Number(data[1].counter_reading) - Number(data[0].counter_reading));
+            } else {
+              powerConsumptionsNew.push(Number(data[0].power_consumption));
+            }
+          }
+
+          var utcDate = new Date(data[i].date + 'T' + data[i].time + 'Z');
+          var formattedDate = mobile
+            ? utcDate.toLocaleTimeString(t('locale'), { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            : utcDate.toLocaleString(t('locale'));
+          dates.push(formattedDate);
+
+          if (Math.abs(Number(data[i].power_consumption) - powerConsumptionsNew[i]) > 500) {
+            powerConsumptions.push(powerConsumptionsNew[i]);
+          } else {
+            powerConsumptions.push(Number(data[i].power_consumption));
+          }
+
+          var currentKwh = Number(data[i].counter_reading) / 10000;
+
+          powerConsumptionsNewNew.push({
+            x: i,
+            y: Number(powerConsumptions[i])
+          });
+          counterReadings.push({
+            x: i,
+            y: currentKwh
+          });
+
+          if (showCostCurve) {
+            var usedTodaySoFar = Math.max(0, currentKwh - startCounterDayKwh);
+            costPoints.push({
+              x: i,
+              y: Number((usedTodaySoFar * pricePerKwh).toFixed(4))
+            });
+          }
+        }
+
+        var lastEntryIndex = data.length - 1;
+        var DatenVolumeTotal = SetDatenVolumeTotal;
+        var DatenVolume = SetDatenVolumeTotal;
+        var verbrauchHeute = Math.max(0, (Number(data[lastEntryIndex].counter_reading) - Number(data[0].counter_reading)) / 10000);
+        DatenVolume = DatenVolume - verbrauchHeute;
+        var currentWatt = Math.max(1, Math.ceil(powerConsumptions[lastEntryIndex]));
+        var AllesVerbrauchtinZeit = DatenVolume * 1000 / currentWatt * 60;
+
+        while (AllesVerbrauchtinZeit < 0) {
+          DatenVolumeTotal = DatenVolumeTotal + SetDatenVolumeTotal;
+          DatenVolume = DatenVolumeTotal - verbrauchHeute;
+          AllesVerbrauchtinZeit = DatenVolume * 1000 / currentWatt * 60;
+        }
+
+        if (AllesVerbrauchtinZeit >= 60) {
+          AllesVerbrauchtinZeit = AllesVerbrauchtinZeit / 60;
+          if (AllesVerbrauchtinZeit >= 24) {
+            AllesVerbrauchtinZeit = (AllesVerbrauchtinZeit / 24).toFixed(2) + t('timeDays');
+          } else {
+            AllesVerbrauchtinZeit = AllesVerbrauchtinZeit.toFixed(2) + t('timeHours');
+          }
+        } else {
+          AllesVerbrauchtinZeit = AllesVerbrauchtinZeit.toFixed(2) + t('timeMinutes');
+        }
+
+        var tagesText =
+          '<strong>' + t('dayOverviewTitle') + '</strong><br>' +
+          t('volRemaining') + DatenVolume.toFixed(4) + ' kWh' + t('of') + DatenVolumeTotal + ' kWh <br>' +
+          t('usedToday') + verbrauchHeute.toFixed(4) + ' kWh <br>' +
+          t('allUsedIn') + AllesVerbrauchtinZeit + t('atPowerOf') + currentWatt + ' W';
+
+        if (calculateCosts) {
+          var grundgebuehrTag = baseFeePerMonth / daysInThisMonth;
+          var arbeitskostenTag = verbrauchHeute * pricePerKwh;
+          var gesamtkostenTag = arbeitskostenTag + grundgebuehrTag;
+          var aktuelleKostenProStunde = (currentWatt / 1000) * pricePerKwh;
+
+          tagesText += '<br><strong>' + t('costDayTitle') + '</strong><br>' +
+            t('energyCosts') + arbeitskostenTag.toFixed(2) + ' € | ' + t('proRataBaseFee') + grundgebuehrTag.toFixed(2) + ' €<br>' +
+            t('totalCostsToday') + gesamtkostenTag.toFixed(2) + ' € (' + t('currentRate') + (aktuelleKostenProStunde * 100).toFixed(2) + t('centPerHourAt') + currentWatt + ' W)';
+        }
+
+        var periodTitle = t('dayLabelPrefix') + firstDateObj.toLocaleDateString(t('locale'));
+        document.getElementById('Datenvolumen').innerHTML = tagesText;
+        document.getElementById('currentPeriodLabel').innerText = periodTitle;
+        document.getElementById('fsPeriodLabel').innerText = periodTitle;
+
+        updateValuesSek = dates[dates.length - 1];
+
+        myChart.data.datasets[0].label = t('dsPowerDay');
+        myChart.data.datasets[0].type = 'line';
+        myChart.data.datasets[0].data = powerConsumptionsNewNew;
+        myChart.data.datasets[1].label = t('dsCounter');
+        myChart.data.datasets[1].data = counterReadings;
+
+        myChart.data.datasets[2].label = t('dsCostDay');
+        myChart.data.datasets[2].type = 'line';
+        myChart.data.datasets[2].hidden = !showCostCurve;
+        myChart.data.datasets[2].data = costPoints;
+        myChart.options.scales.C.display = showCostCurve;
+
+        myChart.data.labels = dates;
+        myChart.options.scales.A.title.text = t('axisPower');
+        myChart.options.plugins.zoom.limits.x.max = data.length;
+
+        if (month != monthbefor) {
+          getDataMonat();
+        }
+        if (yearSelected != yearSelectedBefor) {
+          getDataJahr();
+        }
+
+        myChart.update();
+      }
+      // ==================================================================
+      // ANSICHT 1, 2, 3: MONAT (Tag 0..31), MONATE (12M), JAHRE
+      // ==================================================================
+      else {
+        var labels = [];
+        var periodConsumptions = [];
+        var counterReadings = [];
+        var costPoints = [];
+
+        // Frontend-Plausibilitätsschutz gegen 0-Drops
+        var validCountersKwh = [];
+        var lastValidKwh = 0;
+        for (var j = 0; j < data.length; j++) {
+          var rawKwh = Number(data[j].counter_reading) / 10000;
+          if ( data[j].counter_reading && rawKwh > 0 && rawKwh >= lastValidKwh) {
+            lastValidKwh = rawKwh;
+          }
+          validCountersKwh.push(lastValidKwh);
+        }
+
+        var periodsCount = Math.max(1, data.length - 1);
+        var unitNamesArr = t('unitNames');
+        var einheitName = unitNamesArr[ansicht];
+        var maxDayLabel = data[0] && data[0].days_in_month ? data[0].days_in_month : periodsCount;
+
+        // Anteilige Grundgebühr pro Balken/Abschnitt
+        var baseFeePerUnit = 0;
+        if (ansicht === 1) {
+          baseFeePerUnit = baseFeePerMonth / maxDayLabel;
+        } else if (ansicht === 2) {
+          baseFeePerUnit = baseFeePerMonth;
+        } else if (ansicht === 3) {
+          baseFeePerUnit = baseFeePerMonth * 12;
+        }
+
+        for (var i = 0; i < data.length; i++) {
+          var lbl = data[i].label || (data[i].date + ' ' + data[i].time);
+          if (i === 0 && ansicht === 1) {
+            lbl = t('day0Start');
+          }
+          labels.push(lbl);
+
+          var currentCounterKwh = validCountersKwh[i];
+          var diffKwh = 0;
+
+          if (i > 0) {
+            diffKwh = Math.max(0, currentCounterKwh - validCountersKwh[i - 1]);
+          }
+
+          periodConsumptions.push({
+            x: i,
+            y: Number(diffKwh.toFixed(4))
+          });
+
+          counterReadings.push({
+            x: i,
+            y: Number(currentCounterKwh.toFixed(4))
+          });
+
+          if (showCostCurve) {
+            var unitCost = (i === 0) ? 0 : (diffKwh * pricePerKwh) + baseFeePerUnit;
+            costPoints.push({
+              x: i,
+              y: Number(unitCost.toFixed(2))
+            });
+          }
+        }
+
+        var startCounterVal = validCountersKwh[0];
+        var endCounterVal = validCountersKwh[validCountersKwh.length - 1];
+        var totalConsumptionKwh = Math.max(0, endCounterVal - startCounterVal);
+        var avgPerPeriod = totalConsumptionKwh / periodsCount;
+
+        var titelName = ansicht === 1 ? t('monthViewRange')(maxDayLabel) :
+                        (ansicht === 2 ? t('months12ViewTitle') : t('yearsViewTitle'));
+
+        document.getElementById('currentPeriodLabel').innerText = titelName;
+        document.getElementById('fsPeriodLabel').innerText = titelName;
+
+        var statsHtml =
+          '<strong>' + titelName + ':</strong><br>' +
+          t('totalConsPeriod') + totalConsumptionKwh.toFixed(4) + ' kWh <br>' +
+          t('avgPer') + einheitName + ': ' + avgPerPeriod.toFixed(4) + ' kWh <br>' +
+          t('counterStartEnd') + startCounterVal.toFixed(4) + ' kWh &rarr; ' + t('toEnd') + endCounterVal.toFixed(4) + ' kWh';
+
+        if (calculateCosts) {
+          var arbeitskosten = totalConsumptionKwh * pricePerKwh;
+          var grundgebuehrZeitraum = 0;
+          if (ansicht === 1) {
+            grundgebuehrZeitraum = baseFeePerMonth * (periodsCount / maxDayLabel);
+          } else if (ansicht === 2) {
+            grundgebuehrZeitraum = baseFeePerMonth * periodsCount;
+          } else if (ansicht === 3) {
+            grundgebuehrZeitraum = baseFeePerMonth * 12 * periodsCount;
+          }
+          var gesamtkosten = arbeitskosten + grundgebuehrZeitraum;
+          var avgKostenProEinheit = gesamtkosten / periodsCount;
+
+          statsHtml += '<br><strong>' + t('costsInPeriodTitle') + '</strong><br>' +
+            t('energyCostsLabel') + arbeitskosten.toFixed(2) + ' € | ' + t('baseFeeSimple') + grundgebuehrZeitraum.toFixed(2) + ' €<br>' +
+            t('totalCostsSimple') + gesamtkosten.toFixed(2) + ' € (Ø ' + avgKostenProEinheit.toFixed(2) + ' € ' + t('per') + einheitName + ')';
+        }
+
+        document.getElementById('Datenvolumen').innerHTML = statsHtml;
+
+        myChart.data.datasets[0].label = t('dsConsumptionPer') + einheitName + ' (kWh)';
+        myChart.data.datasets[0].type = 'bar';
+        myChart.data.datasets[0].data = periodConsumptions;
+        myChart.data.datasets[1].label = t('dsCounter');
+        myChart.data.datasets[1].type = 'line';
+        myChart.data.datasets[1].data = counterReadings;
+
+        myChart.data.datasets[2].label = t('dsCostPer') + einheitName + ' (€)';
+        myChart.data.datasets[2].type = 'bar';
+        myChart.data.datasets[2].hidden = !showCostCurve;
+        myChart.data.datasets[2].data = costPoints;
+        myChart.options.scales.C.display = showCostCurve;
+
+        myChart.data.labels = labels;
+        myChart.options.scales.A.title.text = t('axisConsumption');
+        myChart.options.plugins.zoom.limits.x.max = data.length;
+
+        myChart.update();
+      }
     }
 
     function getDataAndUpdateChart() {
       if (updateValues == false) {
         return 0;
       }
+
+      var cacheParam = "&cache=" + (useJsonCache ? "true" : "false");
+      var url = "./get_data.php?password=" + encodeURIComponent(APIpassword) + cacheParam;
+      if (ansicht === 0) {
+        url += "&days=" + day;
+      } else if (ansicht === 1) {
+        url += "&view=month&months_ago=" + month;
+      } else if (ansicht === 2) {
+        url += "&view=months&months_ago=" + month;
+      } else if (ansicht === 3) {
+        url += "&view=years";
+      }
+
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
           var data = JSON.parse(this.responseText);
-          if (data.length === 0) {
+          if (!Array.isArray(data) || data.length === 0) {
             day = daybefor;
             month = monthbefor;
             return 0;
           }
-          var dates = [];
-          var powerConsumptions = [];
-          var powerConsumptionsNew = [];
-          var powerConsumptionsNewNew = [];
-          var counterReadings = [];
-
-          // Zeitzone des PCs abrufen
-          var timeZoneOffset = new Date().getTimezoneOffset();
-
-          // Daten in Arrays speichern und Zeitzone anpassen
-          //for(var i in data) {
-          //var Auflösung = (Math.ceil(data.length / (data.length / 1)))
-          var Auflösung = 1;
-          //for (var i = Auflösung; i < data.length; i += Auflösung) {
-          for (var i = 0; i < data.length; i++) {
-            //for (var i = data.length - data.length; i < data.length; i+=Auflösung ) {
-            var lastEntryIndex = data.length - 1;
-
-            var latestutcDate = new Date(data[i].date + 'T' + data[i].time + 'Z'); // Datum und Zeit in UTC konvertieren
-
-            if (i != 0 && i != Auflösung) {
-              var latestbeforutcDate = new Date(data[i - Auflösung].date + 'T' + data[i - Auflösung].time + 'Z');
-              var unterschiedVerbrauch = data[i].counter_reading - data[i - Auflösung].counter_reading;
-              var power_consumptionNe
-              if (((latestutcDate - latestbeforutcDate) / 1000) <= 3600) { // Bei mehr als 1 Stunde ohne Daten wird keine Leistung hochgerechnet.
-                power_consumptionNew = (unterschiedVerbrauch) * (60 / ((latestutcDate - latestbeforutcDate) / (100))) * 60;
-              } else {
-                power_consumptionNew = Math.ceil(unterschiedVerbrauch)
-                
-              }
-
-              powerConsumptionsNew.push(power_consumptionNew);
-            } else {
-              powerConsumptionsNew.push(data[1].counter_reading - data[0].counter_reading)
-            }
-
-            var utcDate = new Date(data[i].date + 'T' + data[i].time + 'Z'); // Datum und Zeit in UTC konvertieren
-            var localDate = new Date(utcDate.getTime() - timeZoneOffset); // Zeitzone des PCs berücksichtigen
-            var formattedDate = localDate.toLocaleString(); // Datum und Zeit in lokaler Zeit formatieren
-            dates.push(formattedDate);
-            // alert(Math.abs(powerConsumptionsNew[i]));
-            if (Math.abs(data[i].power_consumption - powerConsumptionsNew[i]) > 500) { // Bei mehr als 500 Watt Unterschied wird der errechnete Verbrauch angezeigt.
-              powerConsumptions.push(powerConsumptionsNew[i]);
-            } else {
-              powerConsumptions.push(data[i].power_consumption);
-            }
-
-            //  counterReadings.push(data[i].counter_reading / 10000);
-
-            // dates.push({
-            //   x: i,
-            //   y: formattedDate
-            // })
-            powerConsumptionsNewNew.push({
-              x: i,
-              y: powerConsumptions[i]
-            })
-            counterReadings.push({
-              x: i,
-              y: data[i].counter_reading / 10000
-            })
-          }
-          var lastEntryIndex = data.length - 1;
-          //var latestutcDate = new Date(data[lastEntryIndex].date + 'T' + data[lastEntryIndex].time + 'Z');
-          //var latestbeforutcDate = new Date(data[lastEntryIndex - 1].date + 'T' + data[lastEntryIndex - 1].time + 'Z');
-          //var unterschiedVerbrauch = data[lastEntryIndex].counter_reading - data[lastEntryIndex-1].counter_reading;
-          //alert(unterschiedVerbrauch  * (60 / (latestutcDate  - latestbeforutcDate)) * 60 * 100);
-
-          var DatenVolumeTotal = SetDatenVolumeTotal;
-          var DatenVolume = 10;
-          var verbrauchHeute = (data[lastEntryIndex].counter_reading - data[0].counter_reading) / 10000;
-          DatenVolume = DatenVolume - verbrauchHeute;
-          var AllesVerbrauchtinZeit = DatenVolume * 1000 / Math.ceil(powerConsumptions[lastEntryIndex]) * 60;
-          //alert(AllesVerbrauchtinZeit)
-          while (AllesVerbrauchtinZeit < 0) {
-            DatenVolumeTotal = DatenVolumeTotal + 10;
-            verbrauchHeute = (data[lastEntryIndex].counter_reading - data[0].counter_reading) / 10000;
-            DatenVolume = DatenVolumeTotal - verbrauchHeute;
-            AllesVerbrauchtinZeit = DatenVolume * 1000 / Math.ceil(powerConsumptions[lastEntryIndex]) * 60;
-          }
-
-          // var date = new Date(0);
-          // date.setSeconds(AllesVerbrauchtinZeit*60); // specify value for SECONDS here
-          // var timeString = date.toISOString().substring(8, 23);
-
-          if (AllesVerbrauchtinZeit >= 60) {
-            AllesVerbrauchtinZeit = AllesVerbrauchtinZeit / 60;
-            if (AllesVerbrauchtinZeit >= 24) {
-              AllesVerbrauchtinZeit = (AllesVerbrauchtinZeit / 24).toFixed(2) + " Tagen";
-            } else {
-              AllesVerbrauchtinZeit = AllesVerbrauchtinZeit.toFixed(2) + " Stunden";
-            }
-          } else {
-            AllesVerbrauchtinZeit = AllesVerbrauchtinZeit.toFixed(2) + " Minuten";
-          }
-          document.getElementById('Datenvolumen').innerHTML = 'Verbrauchsvolumen übrig: ' + DatenVolume.toFixed(4) + ' kWh von ' + DatenVolumeTotal + ' kWh <br> Verbrauch heute: ' + verbrauchHeute.toFixed(4) +
-            ' kWh <br> Alles verbraucht in Zeit: ' + AllesVerbrauchtinZeit +
-            ' bei einem Verbrauch von ' + Math.ceil(powerConsumptions[lastEntryIndex]) + ' W';
-
-          updateValuesSek = dates[dates.length - 1];
-
-          //Aggregation der Datenpunkte durch Mittelwertbildung
-          var n = 400;
-          /*
-          var aggregatedData = [];
-          for (var i = 0; i < data.length; i += n) {
-              var chunk = data.slice(i, i + n);
-              var sum = chunk.reduce((acc, val) => acc + val, 0);
-              var average = sum / chunk.length;
-              aggregatedData.push(average);
-          }
-          */
-          //var reducedData = data.filter((element, index) => index % n === 0);
-          var nbPoints = data.length;
-          var samplesPoints = data.length / 10;
-          var thresholdsPoints = data.length - (data.length / 10);
-          var samplesPoints = 100;
-          var thresholdsPoints = 900;
-          //myChart.data.datasets[0].data = powerConsumptions;
-          myChart.data.datasets[1].data = counterReadings;
-          myChart.data.datasets[0].data = powerConsumptionsNewNew;
-          myChart.data.labels = dates;
-
-          if (month != monthbefor) {
-            getDataMonat();
-          }
-          /*
-          myChart.options = {
-            //parsing: false,
-            normalized: true,
-            animation: false,
-            responsive: false,
-            plugins: {
-              decimation: {
-                enabled: true,
-                samples: samplesPoints,
-                threshold: thresholdsPoints,
-                algorithm: 'lttb'
-              },
-              zoom: {
-                limits: {
-                  x: {
-                    min: 0,
-                    max: nbPoints,
-                  }
-                },
-                pan: {
-                  enabled: true,
-                  mode: 'x'
-                },
-                zoom: {
-                  wheel: {
-                    enabled: true
-                  },
-                  pinch: {
-                    enabled: true
-                  },
-                  mode: 'x'
-                },
-              }
-            },
-
-            // scales: {
-            //   yAxes: [{
-            //     id: 'A',
-            //     type: 'linear',
-            //     position: 'left',
-            //     ticks: {
-            //       //maxTicksLimit: 10,
-            //       autoSkip: true,
-            //       beginAtZero: false
-            //     }
-            //   }, {
-            //     id: 'B',
-            //     type: 'linear',
-            //     position: 'right',
-            //     ticks: {
-            //       //maxTicksLimit: 10,
-            //       autoSkip: true,
-            //       beginAtZero: false
-            //     }
-            //   }]
-            // }
-          };
-          */
-          //myChart.height = window.innerHeight * 0.50;
-          //myChart.width = window.innerWidth * 1;
-          myChart.update();
-
-          // var ctx = document.getElementById('myChart').getContext('2d');
-          // var nbPoints = data.length;
-          // var samplesPoints = data.length / 10;
-          // var thresholdsPoints = data.length - (data.length / 10);
-          //var samplesPoints = 1000;
-          //var thresholdsPoints = 900;
-          // var dataArr = []
-          // for (let i = 0; i < nbPoints; i++) {
-          //   dataArr.push({
-          //     x: i,
-          //     y: Math.floor(Math.random() * 100)
-          //   })
-          // }
-          //
-          // myChart = new Chart(ctx, {
-          //   type: 'line',
-          //   data: {
-          //     labels: dates,
-          //
-          //     datasets: [{
-          //       label: 'Stromverbrauch (Wh)',
-          //       data: powerConsumptions,
-          //       yAxisID: 'A',
-          //       backgroundColor: 'rgba(255, 99, 132, 0.2)',
-          //       borderColor: 'rgba(255, 99, 132, 1)',
-          //       borderWidth: 1,
-          //       maxTicksLimit: 2
-          //     }, {
-          //     //   label: 'Stromverbrauch (Wh)',
-          //     //   data: powerConsumptionsNew,
-          //     //   yAxisID: 'A',
-          //     //   backgroundColor: 'rgba(0, 255, 132, 0.2)',
-          //     //   borderColor: 'rgba(0, 255, 0, 1)',
-          //     //   borderWidth: 1,
-          //     //   maxTicksLimit: 2
-          //     // }, {
-          //       label: 'Zählerstand (kWh)',
-          //       data: counterReadings,
-          //       yAxisID: 'B',
-          //       backgroundColor: 'rgba(54, 162, 235, 0.2)',
-          //       borderColor: 'rgba(54, 162, 235, 1)',
-          //       borderWidth: 1,
-          //       maxTicksLimit: 2
-          //       // }, {
-          //       //   label: '# of Votes',
-          //       //   data: dataArr
-          //     }]
-          //   },
-          //   options: {
-          //     //parsing: false,
-          //     normalized: true,
-          //     animation: false,
-          //     responsive: false,
-          //     plugins: {
-          //       decimation: {
-          //         enabled: true,
-          //         samples: samplesPoints,
-          //         threshold: thresholdsPoints,
-          //         algorithm: 'lttb'
-          //       },
-          //       zoom: {
-          //         limits: {
-          //           x: {
-          //             min: 0,
-          //             max: nbPoints,
-          //           }
-          //         },
-          //         pan: {
-          //           enabled: true,
-          //           mode: 'x'
-          //         },
-          //         zoom: {
-          //           wheel: {
-          //             enabled: true
-          //           },
-          //           pinch: {
-          //             enabled: true
-          //           },
-          //           mode: 'x'
-          //         },
-          //       }
-          //     },
-          //     // scales: {
-          //     //   yAxes: [{
-          //     //     id: 'A',
-          //     //     type: 'linear',
-          //     //     position: 'left',
-          //     //     ticks: {
-          //     //       //maxTicksLimit: 10,
-          //     //       autoSkip: true,
-          //     //       beginAtZero: false
-          //     //     }
-          //     //   }, {
-          //     //     id: 'B',
-          //     //     type: 'linear',
-          //     //     position: 'right',
-          //     //     ticks: {
-          //     //       //maxTicksLimit: 10,
-          //     //       autoSkip: true,
-          //     //       beginAtZero: false
-          //     //     }
-          //     //   }]
-          //     // }
-          //   }
-          // });
+          lastChartData = data;
+          renderChartAndStats(data);
         }
       };
-      xhttp.open("GET", "./get_data.php?days=" + day + "&password=" + APIpassword, true);
+
+      xhttp.open("GET", url, true);
       xhttp.send();
     }
 
@@ -619,8 +1770,8 @@
     function waitData() {
       var dealy = 1;
       if (updateValuesSek !== false) {
-        if ((updateValuesSek.charAt(updateValuesSek.length - 1) + dealy) % 10 == new Date().getSeconds() % 10) {
-          var a = (updateValuesSek.charAt(updateValuesSek.length - 2)) % 10
+        if ((parseInt(updateValuesSek.charAt(updateValuesSek.length - 1), 10) + dealy) % 10 == new Date().getSeconds() % 10) {
+          var a = (parseInt(updateValuesSek.charAt(updateValuesSek.length - 2), 10)) % 10;
           if ((Math.floor(new Date().getSeconds() / 10)) % 2 == a) {
 
           }
@@ -640,7 +1791,7 @@
     document.getElementById('passwordSubmit').addEventListener('click', async function () {
       APIpassword = document.getElementById('passwordInput').value;
       try {
-        const response = await fetch('get_data.php?password=' + APIpassword + '&check_password_info=true', { method: 'GET' });
+        const response = await fetch('get_data.php?password=' + encodeURIComponent(APIpassword) + '&check_password_info=true', { method: 'GET' });
         const result = await response.json();
         alert(result.success || result.error);
         if (result.error == "wrong password") {
@@ -658,7 +1809,7 @@
           Init();
         }
       } catch (error) {
-        alert('Fehlgeschlagen.');
+        alert(t('loginFailed'));
       }
     });
 
@@ -681,9 +1832,10 @@
     function Init() {
       if (APIaccess == true) {
         getDataMonat();
+        getDataJahr();
         getDataAndUpdateChart();
       } else {
-        open_login_form()
+        open_login_form();
       }
     }
   </script>
